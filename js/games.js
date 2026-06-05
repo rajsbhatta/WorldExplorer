@@ -148,7 +148,7 @@ function _startFlagGame() {
   _activeGame = 'flag';
   _round      = 0;
   _score      = 0;
-  _pool       = _shuffled(AppState.countries.filter(c => c.flagPng));
+  _pool       = _shuffled(AppState.countries.filter(c => c.cca2));
   _showArena();
   _nextFlagRound();
 }
@@ -181,9 +181,9 @@ function _nextFlagRound() {
 
     <!-- Flag -->
     <img class="flag-display" id="flag-img"
-         src="${flagUrl(correct, 'w1280')}"
+         src="${flagUrl(correct)}"
          alt="Mystery flag"
-         onerror="this.src='${flagUrl(correct,'w320')}'">
+         style="background:var(--bg-raised);">
 
     <div class="game-question">Which country does this flag belong to?</div>
 
@@ -256,8 +256,7 @@ function _startDuelGame() {
   _score      = 0;
   _pool       = _shuffled(
     AppState.countries.filter(c =>
-      c.cca2 !== AppState.homeCountry?.cca2 &&
-      c.latlng[0] !== 0 && c.flagPng
+      c.cca2 !== AppState.homeCountry?.cca2 && c.cca2
     )
   );
   _showArena();
@@ -324,9 +323,9 @@ function _duelOptionHTML(country, slot, dist) {
   return `
     <button class="duel-option" data-slot="${slot}" data-dist="${dist}">
       <img class="duel-flag-img"
-           src="${flagUrl(country,'w640')}"
+           src="${flagUrl(country)}"
            alt="${country.name}"
-           onerror="this.src='${flagUrl(country,'w320')}'">
+           style="background:var(--bg-raised);">
       <div class="duel-country-name">${country.name}</div>
       <div class="duel-dist-reveal">${dist.toLocaleString()} km away</div>
     </button>`;

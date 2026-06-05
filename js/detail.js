@@ -281,17 +281,7 @@ function _detailHTML(c) {
         ${_infoCard('TLD',           c.tld)}
       </div>
 
-      <!-- Coat of arms -->
-      ${c.coatOfArms ? `
-        <div class="section-head mt-4">
-          <div class="section-icon">🛡️</div>
-          <h3>Coat of Arms</h3>
-        </div>
-        <img src="${c.coatOfArms}" alt="Coat of Arms of ${c.name}"
-             style="max-height:140px;max-width:140px;object-fit:contain;
-                    background:var(--bg-surface);border:1px solid var(--border-subtle);
-                    border-radius:var(--r-md);padding:var(--sp-3);">
-      ` : ''}
+      <!-- Coat of arms placeholder removed (not in data source) -->
     </div>
 
     <!-- Tab: Geography -->
@@ -366,21 +356,7 @@ function _detailHTML(c) {
         ).join('')}
       </div>
 
-      <!-- Flag story -->
-      ${c.flagAlt ? `
-        <div class="section-head mt-4">
-          <div class="section-icon">🚩</div>
-          <h3>About the Flag</h3>
-        </div>
-        <div style="background:var(--bg-surface);border:1px solid var(--border-subtle);
-                    border-radius:var(--r-lg);padding:var(--sp-5);display:flex;
-                    gap:var(--sp-5);align-items:flex-start;flex-wrap:wrap;">
-          <img src="${flagSmall}" alt="Flag of ${c.name}"
-               style="width:120px;height:auto;border-radius:var(--r-sm);
-                      box-shadow:var(--shadow-sm);flex-shrink:0;">
-          <p style="font-size:0.88rem;color:var(--text-secondary);
-                    line-height:1.7;flex:1;min-width:200px;">${c.flagAlt}</p>
-        </div>` : ''}
+    <!-- Flag alt text not available in current data source -->
     </div>
 
     <!-- Compare CTA -->

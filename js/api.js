@@ -1,205 +1,224 @@
 /* ============================================================
    World Explorer — API Layer  (js/api.js)
-   Primary:  restcountries.com/v3.1
-   Fallback: restcountries.com/v3.1 (retry without fields filter)
-   Fallback2: countrylayer.com alternative field set
-   Cache: IndexedDB with graceful fallback to in-memory Map
+
+   Data sources (all free, no API key, GitHub raw = reliable):
+     1. mledoze/countries  — name, cca2/3, borders, languages,
+                             currencies, latlng, area, region,
+                             subregion, idd, tld, landlocked
+     2. dr5hn dataset      — population, gdp, timezones
+     3. flagcdn.com        — flag images via iso2 code
+     4. World Bank API     — richer economic indicators
+     5. Wikidata SPARQL    — govt type, head of state
+
+   restcountries.com intentionally removed — returns 403.
    ============================================================ */
 
-/* ── In-memory fallback cache (used if IndexedDB unavailable) ── */
-const _memCache = new Map();
+/* ── In-memory fallback cache ────────────────────────────────── */
+const _mem = new Map();
 
-/* ── IndexedDB cache ─────────────────────────────────────────── */
-const DB_NAME    = 'worldex-cache';
-const DB_VERSION = 1;
-const STORE_NAME = 'kv';
-let _db          = null;
-let _dbFailed    = false;
+/* ── IndexedDB cache with memory fallback ────────────────────── */
+const DB_NAME = 'worldex-v3', DB_VER = 1, STORE = 'kv';
+let _db = null, _dbDead = false;
 
 function openDB() {
-  if (_dbFailed)                return Promise.reject('idb-disabled');
-  if (_db)                      return Promise.resolve(_db);
-  return new Promise((resolve, reject) => {
+  if (_dbDead) return Promise.reject('idb-dead');
+  if (_db)     return Promise.resolve(_db);
+  return new Promise((res, rej) => {
     try {
-      const req = indexedDB.open(DB_NAME, DB_VERSION);
-      req.onupgradeneeded = e => {
-        e.target.result.createObjectStore(STORE_NAME, { keyPath: 'k' });
-      };
-      req.onsuccess = e => { _db = e.target.result; resolve(_db); };
-      req.onerror   = ()  => { _dbFailed = true; reject('idb-error'); };
-    } catch(e) {
-      _dbFailed = true;
-      reject('idb-unavailable');
-    }
+      const r = indexedDB.open(DB_NAME, DB_VER);
+      r.onupgradeneeded = e => e.target.result.createObjectStore(STORE, { keyPath:'k' });
+      r.onsuccess = e => { _db = e.target.result; res(_db); };
+      r.onerror   = ()  => { _dbDead = true; rej('idb-err'); };
+    } catch { _dbDead = true; rej('idb-na'); }
   });
 }
 
-async function cacheGet(key) {
-  /* Try IndexedDB */
+async function cGet(key) {
   try {
     const db = await openDB();
-    return await new Promise((resolve, reject) => {
-      const tx  = db.transaction(STORE_NAME, 'readonly');
-      const req = tx.objectStore(STORE_NAME).get(key);
-      req.onsuccess = () => {
-        const rec = req.result;
-        if (!rec) return resolve(null);
-        if (rec.expires && Date.now() > rec.expires) {
-          cacheDelete(key).catch(()=>{});
-          return resolve(null);
-        }
-        resolve(rec.v);
+    return await new Promise((res, rej) => {
+      const r = db.transaction(STORE,'readonly').objectStore(STORE).get(key);
+      r.onsuccess = () => {
+        const rec = r.result;
+        if (!rec) return res(null);
+        if (rec.exp && Date.now() > rec.exp) { cDel(key); return res(null); }
+        res(rec.v);
       };
-      req.onerror = () => reject(req.error);
+      r.onerror = () => rej(r.error);
     });
   } catch {
-    /* Fallback to memory */
-    const rec = _memCache.get(key);
-    if (!rec) return null;
-    if (rec.expires && Date.now() > rec.expires) { _memCache.delete(key); return null; }
-    return rec.v;
+    const m = _mem.get(key);
+    if (!m) return null;
+    if (m.exp && Date.now() > m.exp) { _mem.delete(key); return null; }
+    return m.v;
   }
 }
 
-async function cacheSet(key, value, ttlMs = 24 * 60 * 60 * 1000) {
-  /* Always write to memory first (instant, never fails) */
-  _memCache.set(key, { v: value, expires: Date.now() + ttlMs });
-  /* Best-effort write to IndexedDB */
+async function cSet(key, value, ttl = 86400000) {
+  const exp = Date.now() + ttl;
+  _mem.set(key, { v: value, exp });
   try {
     const db = await openDB();
-    await new Promise((resolve, reject) => {
-      const tx = db.transaction(STORE_NAME, 'readwrite');
-      tx.objectStore(STORE_NAME).put({ k: key, v: value, expires: Date.now() + ttlMs });
-      tx.oncomplete = () => resolve();
-      tx.onerror    = () => reject(tx.error);
+    await new Promise((res, rej) => {
+      const tx = db.transaction(STORE,'readwrite');
+      tx.objectStore(STORE).put({ k:key, v:value, exp });
+      tx.oncomplete = res; tx.onerror = rej;
     });
-  } catch { /* silent — memory cache is the backup */ }
+  } catch { /* memory cache is the backup */ }
 }
 
-async function cacheDelete(key) {
-  _memCache.delete(key);
-  try {
-    const db = await openDB();
-    await new Promise(resolve => {
-      const tx = db.transaction(STORE_NAME, 'readwrite');
-      tx.objectStore(STORE_NAME).delete(key);
-      tx.oncomplete = () => resolve();
-    });
-  } catch { /* silent */ }
+function cDel(key) {
+  _mem.delete(key);
+  openDB().then(db => {
+    const tx = db.transaction(STORE,'readwrite');
+    tx.objectStore(STORE).delete(key);
+  }).catch(()=>{});
 }
 
 export async function clearAllCache() {
-  _memCache.clear();
+  _mem.clear();
   try {
     const db = await openDB();
-    await new Promise(resolve => {
-      const tx = db.transaction(STORE_NAME, 'readwrite');
-      tx.objectStore(STORE_NAME).clear();
-      tx.oncomplete = () => resolve();
+    await new Promise(res => {
+      const tx = db.transaction(STORE,'readwrite');
+      tx.objectStore(STORE).clear();
+      tx.oncomplete = res;
     });
-  } catch { /* silent */ }
+  } catch {}
 }
 
 /* ── Safe fetch with timeout ─────────────────────────────────── */
-async function safeFetch(url, options = {}, timeoutMs = 15000) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const res = await fetch(url, { ...options, signal: controller.signal });
-    clearTimeout(timer);
-    return res;
-  } catch(e) {
-    clearTimeout(timer);
-    throw e;
-  }
+function safeFetch(url, opts = {}, ms = 20000) {
+  const ctrl = new AbortController();
+  const tid  = setTimeout(() => ctrl.abort(), ms);
+  return fetch(url, { ...opts, signal: ctrl.signal })
+    .finally(() => clearTimeout(tid));
 }
 
-/* ── Number formatters ───────────────────────────────────────── */
+/* ── Formatters ──────────────────────────────────────────────── */
 export function fmtNumber(n) {
   if (n == null) return '—';
   n = Number(n);
-  if (n >= 1e9) return (n / 1e9).toFixed(2) + 'B';
-  if (n >= 1e6) return (n / 1e6).toFixed(2) + 'M';
-  if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+  if (n >= 1e9) return (n/1e9).toFixed(2)+'B';
+  if (n >= 1e6) return (n/1e6).toFixed(2)+'M';
+  if (n >= 1e3) return (n/1e3).toFixed(1)+'K';
   return n.toLocaleString();
 }
-
 export function fmtArea(n) {
   if (n == null) return '—';
-  return Number(n).toLocaleString() + ' km²';
+  return Number(n).toLocaleString()+' km²';
+}
+export function haversine(lat1,lon1,lat2,lon2) {
+  const R=6371, dLat=(lat2-lat1)*Math.PI/180, dLon=(lon2-lon1)*Math.PI/180;
+  const a = Math.sin(dLat/2)**2 +
+    Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+  return Math.round(R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)));
 }
 
-export function haversine(lat1, lon1, lat2, lon2) {
-  const R    = 6371;
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a    =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(lat1 * Math.PI / 180) *
-    Math.cos(lat2 * Math.PI / 180) *
-    Math.sin(dLon / 2) ** 2;
-  return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+/* ── Flag URL ────────────────────────────────────────────────── */
+export function flagUrl(country, _size = 'w320') {
+  if (!country?.cca2) return '';
+  const code = country.cca2.toLowerCase();
+  return `https://flagcdn.com/w320/${code}.png`;
 }
 
-/* ── REST Countries ──────────────────────────────────────────── */
-const RC_BASE   = 'https://restcountries.com/v3.1';
-const RC_FIELDS = [
-  'name','cca2','cca3','capital','region','subregion',
-  'population','area','landlocked','latlng','borders',
-  'languages','currencies','timezones','idd','tld',
-  'flags','coatOfArms','car','continents','independent',
-  'unMember','startOfWeek','fifa'
-].join(',');
+/* ══════════════════════════════════════════════════════════════
+   PRIMARY DATA — mledoze + dr5hn merged
+   ══════════════════════════════════════════════════════════════ */
+const MLEDOZE_URL = 'https://raw.githubusercontent.com/mledoze/countries/master/countries.json';
+const DR5HN_URL   = 'https://raw.githubusercontent.com/dr5hn/countries-states-cities-database/master/json/countries.json';
+const CACHE_KEY   = 'merged:v4';
+const CACHE_TTL   = 7 * 86400000; // 7 days
 
 export async function loadAllCountries() {
-  const CACHE_KEY = 'rc:all:v2';
-  const TTL       = 7 * 24 * 60 * 60 * 1000;
+  /* 1 — cache hit */
+  const hit = await cGet(CACHE_KEY);
+  if (hit && Array.isArray(hit) && hit.length > 100) return hit;
 
-  /* 1 — try cache */
-  const cached = await cacheGet(CACHE_KEY);
-  if (cached && Array.isArray(cached) && cached.length > 100) {
-    return cached;
+  /* 2 — fetch both sources in parallel */
+  const [mledozeRes, dr5hnRes] = await Promise.allSettled([
+    safeFetch(MLEDOZE_URL).then(r => { if(!r.ok) throw r.status; return r.json(); }),
+    safeFetch(DR5HN_URL  ).then(r => { if(!r.ok) throw r.status; return r.json(); }),
+  ]);
+
+  if (mledozeRes.status === 'rejected') {
+    throw new Error('Failed to load country data: ' + mledozeRes.reason);
   }
 
-  /* 2 — try primary URL (with fields filter) */
-  let rawData = null;
-  const urls = [
-    `${RC_BASE}/all?fields=${RC_FIELDS}`,
-    `${RC_BASE}/all`,                         /* fallback: no fields filter */
-  ];
+  const mledoze = mledozeRes.value;  /* primary — always available */
 
-  for (const url of urls) {
-    try {
-      console.log('[API] Fetching:', url);
-      const res = await safeFetch(url);
-      if (!res.ok) {
-        console.warn('[API] HTTP', res.status, 'from', url);
-        continue;
-      }
-      const json = await res.json();
-      if (Array.isArray(json) && json.length > 50) {
-        rawData = json;
-        console.log('[API] Got', json.length, 'countries from', url);
-        break;
-      }
-    } catch(e) {
-      console.warn('[API] Fetch failed for', url, e.message);
+  /* Build a population/timezone lookup from dr5hn (keyed by iso2) */
+  const dr5hnMap = new Map();
+  if (dr5hnRes.status === 'fulfilled') {
+    for (const c of dr5hnRes.value) {
+      if (c.iso2) dr5hnMap.set(c.iso2.toUpperCase(), c);
     }
   }
 
-  if (!rawData) {
-    throw new Error('Could not load country data from any source');
-  }
+  const result = mledoze
+    .filter(c => c.cca2 && c.name?.common)
+    .map(raw => _merge(raw, dr5hnMap.get(raw.cca2)))
+    .sort((a,b) => a.name.localeCompare(b.name));
 
-  /* Normalise + sort */
-  const result = rawData
-    .filter(c => c.name?.common)   /* must have a name */
-    .map(normaliseCountry)
-    .sort((a, b) => a.name.localeCompare(b.name));
-
-  /* Cache result */
-  await cacheSet(CACHE_KEY, result, TTL);
+  await cSet(CACHE_KEY, result, CACHE_TTL);
   return result;
+}
+
+function _merge(m, d) {
+  /* m = mledoze record, d = dr5hn record (may be undefined) */
+  const currencies = m.currencies
+    ? Object.entries(m.currencies).map(([code,val]) => ({
+        code, name: val?.name || code, symbol: val?.symbol || ''
+      }))
+    : [];
+
+  const languages = m.languages ? Object.values(m.languages) : [];
+
+  const callingCode = m.idd?.root
+    ? m.idd.root + (m.idd.suffixes?.[0] || '')
+    : (d?.phonecode ? '+'+d.phonecode : '—');
+
+  const timezones = d?.timezones
+    ? d.timezones.map(t => t.zoneName || t.tzName || String(t)).filter(Boolean)
+    : [];
+
+  return {
+    name:         m.name?.common        || '—',
+    officialName: m.name?.official      || m.name?.common || '—',
+    nativeName:   _nativeName(m.name),
+    cca2:         m.cca2                || '',
+    cca3:         m.cca3                || '',
+    capital:      m.capital?.[0]        || d?.capital || '—',
+    region:       m.region              || '—',
+    subregion:    m.subregion           || '—',
+    continents:   m.continents          || [m.region].filter(Boolean),
+    population:   d?.population         || 0,
+    area:         m.area                || d?.area_sq_km || 0,
+    landlocked:   m.landlocked          || false,
+    latlng:       m.latlng              || (d ? [Number(d.latitude), Number(d.longitude)] : [0,0]),
+    borders:      m.borders             || [],
+    languages,
+    currencies,
+    timezones,
+    callingCode,
+    tld:          m.tld?.[0]            || d?.tld || '—',
+    flagPng:      '',   /* built dynamically via flagUrl() */
+    flagSvg:      '',
+    flagAlt:      '',
+    coatOfArms:   '',
+    drivingSide:  m.car?.side           || '—',
+    unMember:     m.unMember            || false,
+    independent:  m.independent         !== false,
+    fifa:         m.cioc                || '',
+    startOfWeek:  'monday',
+    gdpRaw:       d?.gdp                || null,  /* dr5hn GDP in millions USD */
+  };
+}
+
+function _nativeName(nameObj) {
+  if (!nameObj?.native) return null;
+  const first = Object.values(nameObj.native)[0];
+  return first?.common || null;
 }
 
 export async function getCountry(cca2) {
@@ -212,93 +231,33 @@ export async function getCountriesByCca3(cca3Arr) {
   return cca3Arr.map(c3 => all.find(c => c.cca3 === c3)).filter(Boolean);
 }
 
-function normaliseCountry(raw) {
-  const currencies = raw.currencies
-    ? Object.entries(raw.currencies).map(([code, val]) => ({
-        code,
-        name:   val?.name   || code,
-        symbol: val?.symbol || ''
-      }))
-    : [];
-
-  const languages = raw.languages
-    ? Object.values(raw.languages)
-    : [];
-
-  const callingCode = raw.idd?.root
-    ? raw.idd.root + (raw.idd.suffixes?.[0] || '')
-    : '—';
-
-  return {
-    name:         raw.name?.common        || '—',
-    officialName: raw.name?.official      || raw.name?.common || '—',
-    nativeName:   _nativeName(raw.name),
-    cca2:         raw.cca2                || '',
-    cca3:         raw.cca3                || '',
-    capital:      raw.capital?.[0]        || '—',
-    region:       raw.region              || '—',
-    subregion:    raw.subregion           || '—',
-    continents:   raw.continents          || [],
-    population:   raw.population          || 0,
-    area:         raw.area                || 0,
-    landlocked:   raw.landlocked          || false,
-    latlng:       raw.latlng              || [0, 0],
-    borders:      raw.borders             || [],
-    languages,
-    currencies,
-    timezones:    raw.timezones           || [],
-    callingCode,
-    tld:          raw.tld?.[0]            || '—',
-    flagPng:      raw.flags?.png          || '',
-    flagSvg:      raw.flags?.svg          || '',
-    flagAlt:      raw.flags?.alt          || '',
-    coatOfArms:   raw.coatOfArms?.png     || '',
-    drivingSide:  raw.car?.side           || '—',
-    unMember:     raw.unMember            || false,
-    independent:  raw.independent         !== false,
-    fifa:         raw.fifa                || '',
-    startOfWeek:  raw.startOfWeek         || 'monday',
-  };
-}
-
-function _nativeName(nameObj) {
-  if (!nameObj?.nativeName) return null;
-  const first = Object.values(nameObj.nativeName)[0];
-  return first?.common || null;
-}
-
-/* ── World Bank ──────────────────────────────────────────────── */
-const WB_BASE       = 'https://api.worldbank.org/v2';
+/* ══════════════════════════════════════════════════════════════
+   WORLD BANK — economic indicators
+   ══════════════════════════════════════════════════════════════ */
+const WB_BASE = 'https://api.worldbank.org/v2';
 const WB_INDICATORS = [
-  'NY.GDP.MKTP.CD',
-  'NY.GDP.PCAP.CD',
-  'EN.POP.DNST',
-  'SP.DYN.LE00.IN',
-  'SE.ADT.LITR.ZS',
-  'SL.UEM.TOTL.ZS',
-  'FP.CPI.TOTL.ZG'
+  'NY.GDP.MKTP.CD','NY.GDP.PCAP.CD','EN.POP.DNST',
+  'SP.DYN.LE00.IN','SE.ADT.LITR.ZS','SL.UEM.TOTL.ZS','FP.CPI.TOTL.ZG'
 ];
 
 export async function loadWorldBankData(cca2) {
-  const cacheKey = `wb:${cca2}:v2`;
-  const cached   = await cacheGet(cacheKey);
+  const key    = `wb3:${cca2}`;
+  const cached = await cGet(key);
   if (cached) return cached;
 
   const results = {};
-  await Promise.allSettled(
-    WB_INDICATORS.map(async indicator => {
-      try {
-        const url = `${WB_BASE}/country/${cca2}/indicator/${indicator}?format=json&mrv=1&per_page=1`;
-        const res = await safeFetch(url, {}, 10000);
-        if (!res.ok) return;
-        const json = await res.json();
-        const val  = json?.[1]?.[0]?.value;
-        if (val != null) results[indicator] = val;
-      } catch { /* skip silently */ }
-    })
-  );
+  await Promise.allSettled(WB_INDICATORS.map(async ind => {
+    try {
+      const url = `${WB_BASE}/country/${cca2}/indicator/${ind}?format=json&mrv=1&per_page=1`;
+      const res = await safeFetch(url, {}, 10000);
+      if (!res.ok) return;
+      const json = await res.json();
+      const val  = json?.[1]?.[0]?.value;
+      if (val != null) results[ind] = val;
+    } catch {}
+  }));
 
-  const formatted = {
+  const out = {
     gdp:          results['NY.GDP.MKTP.CD'] ?? null,
     gdpPerCapita: results['NY.GDP.PCAP.CD'] ?? null,
     density:      results['EN.POP.DNST']    ?? null,
@@ -307,107 +266,88 @@ export async function loadWorldBankData(cca2) {
     unemployment: results['SL.UEM.TOTL.ZS'] ?? null,
     inflation:    results['FP.CPI.TOTL.ZG'] ?? null,
   };
-
-  await cacheSet(cacheKey, formatted, 3 * 24 * 60 * 60 * 1000);
-  return formatted;
+  await cSet(key, out, 3*86400000);
+  return out;
 }
 
 export function fmtWB(key, val) {
   if (val == null) return '—';
-  switch (key) {
-    case 'gdp':          return '$' + fmtNumber(val);
-    case 'gdpPerCapita': return '$' + fmtNumber(val);
-    case 'density':      return Number(val).toFixed(1) + '/km²';
-    case 'lifeExp':      return Number(val).toFixed(1) + ' yrs';
-    case 'literacy':     return Number(val).toFixed(1) + '%';
-    case 'unemployment': return Number(val).toFixed(1) + '%';
-    case 'inflation':    return Number(val).toFixed(1) + '%';
+  switch(key) {
+    case 'gdp':          return '$'+fmtNumber(val);
+    case 'gdpPerCapita': return '$'+fmtNumber(val);
+    case 'density':      return Number(val).toFixed(1)+'/km²';
+    case 'lifeExp':      return Number(val).toFixed(1)+' yrs';
+    case 'literacy':     return Number(val).toFixed(1)+'%';
+    case 'unemployment': return Number(val).toFixed(1)+'%';
+    case 'inflation':    return Number(val).toFixed(1)+'%';
     default:             return String(val);
   }
 }
 
-/* ── Wikidata ────────────────────────────────────────────────── */
-const WD_ENDPOINT = 'https://query.wikidata.org/sparql';
+/* ══════════════════════════════════════════════════════════════
+   WIKIDATA
+   ══════════════════════════════════════════════════════════════ */
+const WD = 'https://query.wikidata.org/sparql';
 
 export async function loadWikidataPolitical(countryName) {
-  const cacheKey = `wd:pol:${countryName}`;
-  const cached   = await cacheGet(cacheKey);
+  const key    = `wd4:pol:${countryName}`;
+  const cached = await cGet(key);
   if (cached) return cached;
-
-  const sparql = `
-    SELECT ?govTypeLabel ?hosLabel ?hogLabel WHERE {
-      ?country wikibase:sitelinks ?sl .
-      ?country rdfs:label "${countryName}"@en .
-      OPTIONAL { ?country wdt:P122 ?govType . }
-      OPTIONAL { ?country wdt:P35  ?hos . }
-      OPTIONAL { ?country wdt:P6   ?hog . }
-      SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
-    } LIMIT 1`;
-
+  const sparql = `SELECT ?govTypeLabel ?hosLabel ?hogLabel WHERE {
+    ?c rdfs:label "${countryName}"@en .
+    OPTIONAL { ?c wdt:P122 ?govType . }
+    OPTIONAL { ?c wdt:P35  ?hos . }
+    OPTIONAL { ?c wdt:P6   ?hog . }
+    SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
+  } LIMIT 1`;
   try {
-    const url = `${WD_ENDPOINT}?query=${encodeURIComponent(sparql)}&format=json`;
-    const res = await safeFetch(url, { headers:{ Accept:'application/sparql-results+json' } }, 12000);
-    if (!res.ok) throw new Error('Wikidata ' + res.status);
+    const res = await safeFetch(`${WD}?query=${encodeURIComponent(sparql)}&format=json`,
+      { headers:{ Accept:'application/sparql-results+json' } }, 12000);
+    if (!res.ok) throw 0;
     const json = await res.json();
     const row  = json.results?.bindings?.[0] || {};
-    const result = {
+    const out  = {
       governmentType: row.govTypeLabel?.value || null,
       headOfState:    row.hosLabel?.value     || null,
       headOfGov:      row.hogLabel?.value     || null,
     };
-    await cacheSet(cacheKey, result, 7 * 24 * 60 * 60 * 1000);
-    return result;
-  } catch {
-    return { governmentType: null, headOfState: null, headOfGov: null };
-  }
+    await cSet(key, out, 7*86400000);
+    return out;
+  } catch { return { governmentType:null, headOfState:null, headOfGov:null }; }
 }
 
-export async function loadSharedOrgs(country1Name, country2Name) {
-  const cacheKey = `wd:orgs:${country1Name}:${country2Name}`;
-  const cached   = await cacheGet(cacheKey);
+export async function loadSharedOrgs(name1, name2) {
+  const key    = `wd4:orgs:${name1}:${name2}`;
+  const cached = await cGet(key);
   if (cached) return cached;
-
-  const sparql = `
-    SELECT ?orgLabel WHERE {
-      ?c1 rdfs:label "${country1Name}"@en .
-      ?c2 rdfs:label "${country2Name}"@en .
-      ?c1 wdt:P463 ?org . ?c2 wdt:P463 ?org .
-      ?org wdt:P31 wd:Q484652 .
-      SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
-    } LIMIT 20`;
-
+  const sparql = `SELECT ?orgLabel WHERE {
+    ?c1 rdfs:label "${name1}"@en . ?c2 rdfs:label "${name2}"@en .
+    ?c1 wdt:P463 ?org . ?c2 wdt:P463 ?org .
+    ?org wdt:P31 wd:Q484652 .
+    SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
+  } LIMIT 20`;
   try {
-    const url = `${WD_ENDPOINT}?query=${encodeURIComponent(sparql)}&format=json`;
-    const res = await safeFetch(url, { headers:{ Accept:'application/sparql-results+json' } }, 12000);
-    if (!res.ok) throw new Error('Wikidata ' + res.status);
+    const res = await safeFetch(`${WD}?query=${encodeURIComponent(sparql)}&format=json`,
+      { headers:{ Accept:'application/sparql-results+json' } }, 12000);
+    if (!res.ok) throw 0;
     const json = await res.json();
-    const orgs = (json.results?.bindings || [])
-      .map(b => b.orgLabel?.value)
-      .filter(v => v && !v.startsWith('Q'));
-    await cacheSet(cacheKey, orgs, 7 * 24 * 60 * 60 * 1000);
+    const orgs = (json.results?.bindings||[])
+      .map(b=>b.orgLabel?.value).filter(v=>v&&!v.startsWith('Q'));
+    await cSet(key, orgs, 7*86400000);
     return orgs;
-  } catch {
-    return [];
-  }
+  } catch { return []; }
 }
 
-/* ── Flag URL ────────────────────────────────────────────────── */
-export function flagUrl(country, size = 'w320') {
-  if (country?.flagPng) return country.flagPng;
-  if (country?.cca2)    return `https://flagcdn.com/${size}/${country.cca2.toLowerCase()}.png`;
-  return '';
-}
-
-/* ── Stats for compare view ──────────────────────────────────── */
+/* ── Stats for compare ───────────────────────────────────────── */
 export function countryStats(country, wb) {
   return {
-    population:   { label:'Population',     value:fmtNumber(country.population),          raw:country.population    },
-    area:         { label:'Area',            value:fmtArea(country.area),                  raw:country.area          },
-    gdp:          { label:'GDP',             value:fmtWB('gdp',wb?.gdp),                   raw:wb?.gdp               },
-    gdpPerCap:    { label:'GDP/Capita',      value:fmtWB('gdpPerCapita',wb?.gdpPerCapita), raw:wb?.gdpPerCapita      },
-    lifeExp:      { label:'Life Expectancy', value:fmtWB('lifeExp',wb?.lifeExp),           raw:wb?.lifeExp           },
-    literacy:     { label:'Literacy',        value:fmtWB('literacy',wb?.literacy),         raw:wb?.literacy          },
-    unemployment: { label:'Unemployment',    value:fmtWB('unemployment',wb?.unemployment), raw:wb?.unemployment      },
+    population:   { label:'Population',     value:fmtNumber(country.population),          raw:country.population },
+    area:         { label:'Area',            value:fmtArea(country.area),                  raw:country.area       },
+    gdp:          { label:'GDP',             value:fmtWB('gdp',wb?.gdp),                   raw:wb?.gdp            },
+    gdpPerCap:    { label:'GDP/Capita',      value:fmtWB('gdpPerCapita',wb?.gdpPerCapita), raw:wb?.gdpPerCapita   },
+    lifeExp:      { label:'Life Expectancy', value:fmtWB('lifeExp',wb?.lifeExp),           raw:wb?.lifeExp        },
+    literacy:     { label:'Literacy',        value:fmtWB('literacy',wb?.literacy),         raw:wb?.literacy       },
+    unemployment: { label:'Unemployment',    value:fmtWB('unemployment',wb?.unemployment), raw:wb?.unemployment   },
   };
 }
 

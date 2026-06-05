@@ -3,6 +3,7 @@
    ============================================================ */
 
 import { loadAllCountries, flagUrl } from './api.js';
+/* flagUrl is used throughout this module for dynamic flag generation */
 import { initCountriesPage }         from './countries.js';
 import { initDetailPage }            from './detail.js';
 import { initComparePage }           from './compare.js';
@@ -141,7 +142,7 @@ function renderHomeWidget() {
   } else {
     wrap.innerHTML = `
       <button class="home-widget-btn" id="pick-home-btn" title="Change home country">
-        <img src="${hc.flagPng}" alt="${hc.name}" width="28" height="19"
+        <img src="${flagUrl(hc)}" alt="${hc.name}" width="28" height="19"
              style="border-radius:3px;object-fit:cover;flex-shrink:0;">
         <span style="font-family:var(--font-display);font-weight:700;font-size:0.78rem;
                      color:var(--text-secondary);white-space:nowrap;overflow:hidden;
@@ -191,7 +192,7 @@ function renderHomePage() {
       <div class="home-hero">
         <div class="home-greeting">Your Home Country</div>
         <div class="home-country-selector" id="home-pick-btn" role="button" tabindex="0">
-          <img class="home-country-flag" src="${hc.flagPng}" alt="${hc.name}">
+          <img class="home-country-flag" src="${flagUrl(hc)}" alt="${hc.name}">
           <div>
             <div class="home-country-name">${hc.name}</div>
             <div class="home-country-hint">Tap to change</div>
@@ -234,7 +235,7 @@ function renderPickerList(query) {
   list.innerHTML = filtered.slice(0, 120).map(c => `
     <button class="picker-item ${AppState.homeCountry?.cca2 === c.cca2 ? 'selected' : ''}"
             data-cca2="${c.cca2}">
-      <img class="picker-flag" src="${flagUrl(c, 'w80')}" alt="${c.name}"
+      <img class="picker-flag" src="${flagUrl(c)}" alt="${c.name}"
            loading="lazy" width="36" height="24">
       <span class="picker-name">${c.name}</span>
       <span class="picker-check">✓</span>

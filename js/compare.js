@@ -157,7 +157,7 @@ function _searchTarget(query) {
   results.innerHTML = slice.map(c => `
     <button class="picker-item" data-cca2="${c.cca2}"
             style="width:100%;">
-      <img class="picker-flag" src="${flagUrl(c,'w80')}" alt="${c.name}"
+      <img class="picker-flag" src="${flagUrl(c)}" alt="${c.name}"
            loading="lazy" width="36" height="24">
       <span class="picker-name">${c.name}</span>
       <span style="font-size:0.72rem;color:var(--text-muted);">${c.capital}</span>
@@ -192,11 +192,12 @@ function _renderState() {
     if (home) {
       homeContent.innerHTML = `
         <div style="display:flex;align-items:center;gap:var(--sp-3);">
-          <img src="${flagUrl(home,'w160')}" alt="${home.name}"
+          <img src="${flagUrl(home)}" alt="${home.name}"
                style="width:48px;height:32px;object-fit:cover;border-radius:4px;flex-shrink:0;">
           <div>
             <div style="font-family:var(--font-display);font-weight:700;
-                        font-size:0.88rem;color:var(--text-primary);">${home.name}</div>
+                        font-size:0.88rem;color:var(--text-primary);
+                        word-break:break-word;line-height:1.3;">${home.name}</div>
             <div style="font-size:0.7rem;color:var(--teal-bright);">Tap to change</div>
           </div>
         </div>`;
@@ -216,11 +217,12 @@ function _renderState() {
     if (target) {
       targetContent.innerHTML = `
         <div style="display:flex;align-items:center;gap:var(--sp-3);">
-          <img src="${flagUrl(target,'w160')}" alt="${target.name}"
+          <img src="${flagUrl(target)}" alt="${target.name}"
                style="width:48px;height:32px;object-fit:cover;border-radius:4px;flex-shrink:0;">
           <div>
             <div style="font-family:var(--font-display);font-weight:700;
-                        font-size:0.88rem;color:var(--text-primary);">${target.name}</div>
+                        font-size:0.88rem;color:var(--text-primary);
+                        word-break:break-word;line-height:1.3;">${target.name}</div>
             <div style="font-size:0.7rem;color:var(--amber-bright);">Tap to change</div>
           </div>
         </div>`;
@@ -348,7 +350,7 @@ function _buildCompareHTML(home, target, sHome, sTarget, dist, orgs) {
     <!-- Side by side flags + view detail -->
     <div class="compare-countries" style="margin-bottom:var(--sp-3);">
       <div class="compare-country-info">
-        <img class="compare-flag" src="${flagUrl(home,'w320')}" alt="${home.name}">
+        <img class="compare-flag" src="${flagUrl(home)}" alt="${home.name}">
         <div class="compare-name">${home.name}</div>
         <button class="btn btn-ghost" id="cmp-view-home"
                 style="font-size:0.72rem;padding:var(--sp-1) var(--sp-2);margin-top:var(--sp-2);">
@@ -357,7 +359,7 @@ function _buildCompareHTML(home, target, sHome, sTarget, dist, orgs) {
       </div>
       <div class="compare-vs">VS</div>
       <div class="compare-country-info">
-        <img class="compare-flag" src="${flagUrl(target,'w320')}" alt="${target.name}">
+        <img class="compare-flag" src="${flagUrl(target)}" alt="${target.name}">
         <div class="compare-name">${target.name}</div>
         <button class="btn btn-ghost" id="cmp-view-target"
                 style="font-size:0.72rem;padding:var(--sp-1) var(--sp-2);margin-top:var(--sp-2);">
@@ -370,7 +372,7 @@ function _buildCompareHTML(home, target, sHome, sTarget, dist, orgs) {
     <div style="display:flex;flex-wrap:wrap;gap:var(--sp-2);margin-bottom:var(--sp-5);">
       ${_factChip('🌍', home.region, target.region === home.region ? 'Same region' : target.region)}
       ${_factChip('🕐', home.timezones[0] || '—', target.timezones[0] || '—')}
-      ${_factChip('🚗', _cap(home.drivingSide), _cap(target.drivingSide))}
+      ${_factChip('🗣️', home.languages[0] || '—', target.languages[0] || '—')}
     </div>
 
     <!-- Stat comparison rows -->

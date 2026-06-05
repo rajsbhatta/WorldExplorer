@@ -347,19 +347,21 @@ async function boot() {
 
   } catch (err) {
     console.error('[Boot] Failed:', err);
-    window.__hideSplash?.();   /* hide splash even on error */
+    window.__hideSplash?.();
 
+    const msg = err?.message || String(err);
     if (heroSection) {
       heroSection.innerHTML = `
         <div class="empty-state">
           <div class="empty-icon">⚠️</div>
           <p>Could not load country data.<br>Check your connection and retry.</p>
+          <p style="font-size:0.72rem;color:var(--text-muted);margin-top:8px;">${msg}</p>
           <button class="btn btn-primary mt-4" onclick="location.reload()">
             Retry
           </button>
         </div>`;
     }
-    showToast('Failed to load data. Are you offline?', 'error', 5000);
+    showToast('Failed to load data — tap Retry', 'error', 6000);
   }
 }
 

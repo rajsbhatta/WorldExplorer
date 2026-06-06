@@ -637,3 +637,16 @@ h3 { font-size:clamp(1rem,2vw,1.2rem); }
 /* Home widget button */
 .home-widget-btn { display:flex; align-items:center; gap:6px; background:var(--bg-raised); border:1px solid var(--border-mid); border-radius:var(--r-full); padding:5px 10px 5px 6px; cursor:pointer; transition:border-color var(--tx-fast); max-width:130px; }
 .home-widget-btn:hover { border-color:var(--accent-mid); }
+
+/* ── New game card variants ──────────────────────────────────── */
+.game-card:nth-child(3)::before { background:radial-gradient(circle at 15% 50%,rgba(249,180,41,0.10) 0%,transparent 65%); }
+.game-card:nth-child(4)::before { background:radial-gradient(circle at 15% 50%,rgba(255,92,106,0.09) 0%,transparent 65%); }
+
+/* ── Mystery country autocomplete ───────────────────────────── */
+#mystery-suggestions button { font-family:var(--font-body); }
+#mystery-suggestions { scrollbar-width:thin; }
+
+/* ── Games grid — 2 cols on wide, 1 col narrow ───────────────── */
+@media (min-width:640px) {
+  .games-grid { grid-template-columns:1fr 1fr; }
+}

@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="description" content="Every country in your pocket — explore, compare, and play.">
-  <meta name="theme-color" content="#0a0f1a">
+  <meta name="theme-color" content="#09090f">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -14,273 +14,234 @@
   <meta property="og:type" content="website">
 
   <title>World Explorer</title>
-
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
 
   <style>
-    /* --- Splash (self-contained, no CSS vars needed) --- */
+    /* Splash */
     #splash {
-      position: fixed; inset: 0; z-index: 9999;
-      background: #080d18;
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center; gap: 16px;
-      transition: opacity 350ms ease, transform 350ms ease;
+      position:fixed;inset:0;z-index:9999;
+      background:#09090f;
+      display:flex;flex-direction:column;
+      align-items:center;justify-content:center;gap:16px;
+      transition:opacity 350ms ease,transform 350ms ease;
     }
-    #splash.out { opacity: 0; transform: scale(1.03); pointer-events: none; }
-    .sp-globe {
-      width: 72px; height: 72px; border-radius: 50%;
-      border: 3px solid #2ee8c8; font-size: 36px;
-      display: flex; align-items: center; justify-content: center;
-      animation: spPulse 1.6s ease-in-out infinite;
+    #splash.out{opacity:0;transform:scale(1.03);pointer-events:none;}
+    .sp-globe{width:70px;height:70px;border-radius:50%;border:2.5px solid #00d4a8;
+      display:flex;align-items:center;justify-content:center;font-size:34px;
+      animation:spPulse 1.6s ease-in-out infinite;}
+    .sp-title{font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;
+      font-size:1.55rem;color:#f0f0f8;letter-spacing:-0.03em;}
+    .sp-title b{color:#00d4a8;}
+    .sp-sub{font-family:'Inter',sans-serif;font-size:.82rem;color:#55556a;}
+    .sp-bar{width:150px;height:3px;background:#18181f;border-radius:99px;overflow:hidden;}
+    .sp-fill{height:100%;width:0%;background:linear-gradient(90deg,#00d4a8,#f9b429);
+      border-radius:99px;transition:width 180ms ease;}
+    @keyframes spPulse{
+      0%,100%{box-shadow:0 0 0 0 rgba(0,212,168,.3);}
+      50%{box-shadow:0 0 0 12px rgba(0,212,168,0);}
     }
-    .sp-title { font-family:'Syne',sans-serif; font-weight:800; font-size:1.6rem; color:#e8edf5; letter-spacing:-0.02em; }
-    .sp-title b { color:#2ee8c8; font-weight:800; }
-    .sp-sub { font-family:'DM Sans',sans-serif; font-size:0.85rem; color:#4a5a78; }
-    .sp-bar { width:160px; height:3px; background:#162035; border-radius:99px; overflow:hidden; }
-    .sp-fill { height:100%; width:0%; background:linear-gradient(90deg,#2ee8c8,#f5c842); border-radius:99px; transition:width 200ms ease; }
-    @keyframes spPulse {
-      0%,100% { box-shadow:0 0 0 0 rgba(46,232,200,.3); }
-      50%     { box-shadow:0 0 0 12px rgba(46,232,200,0); }
-    }
-
-    /* --- Safe area --- */
-    #bottom-nav { padding-bottom:env(safe-area-inset-bottom); height:calc(60px + env(safe-area-inset-bottom)); }
-    .page { padding-bottom:calc(60px + env(safe-area-inset-bottom) + 24px); }
-
-    /* --- Home widget button --- */
-    .home-widget-btn {
-      display:flex; align-items:center; gap:6px;
-      background:var(--bg-raised); border:1px solid var(--border-mid);
-      border-radius:var(--r-full); padding:5px 10px 5px 6px;
-      cursor:pointer; transition:border-color var(--tx-fast); max-width:130px;
-    }
-    .home-widget-btn:hover { border-color:var(--teal-mid); }
+    /* Safe area */
+    #bottom-nav{padding-bottom:env(safe-area-inset-bottom);height:calc(62px + env(safe-area-inset-bottom));}
+    .page{padding-bottom:calc(62px + env(safe-area-inset-bottom) + 24px);}
   </style>
 </head>
-
 <body>
 
-  <!-- ═══ SPLASH ═══════════════════════════════════════════════ -->
-  <div id="splash">
-    <div class="sp-globe">🌍</div>
-    <div class="sp-title">World <b>Explorer</b></div>
-    <div class="sp-sub">Every country in your pocket</div>
-    <div class="sp-bar"><div class="sp-fill" id="sp-fill"></div></div>
-  </div>
+<!-- SPLASH -->
+<div id="splash">
+  <div class="sp-globe">🌍</div>
+  <div class="sp-title">World <b>Explorer</b></div>
+  <div class="sp-sub">Every country in your pocket</div>
+  <div class="sp-bar"><div class="sp-fill" id="sp-fill"></div></div>
+</div>
 
-  <!-- ═══ APP ══════════════════════════════════════════════════ -->
-  <div id="app">
+<div id="app">
 
-    <!-- Top header -->
-    <header id="top-header">
-      <div class="header-logo">
-        <div class="globe-icon">🌍</div>
-        World <span>Explorer</span>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px;">
-        <div id="home-country-widget"></div>
-        <button id="install-btn" class="btn btn-secondary hidden"
-                style="font-size:0.75rem;padding:6px 12px;">Install</button>
-      </div>
-    </header>
+  <!-- Header (mobile) -->
+  <header id="top-header">
+    <div class="header-logo">
+      <div class="globe-icon">🌍</div>
+      World <span>Explorer</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <div id="home-country-widget"></div>
+      <button id="install-btn" class="btn btn-secondary hidden"
+              style="font-size:.75rem;padding:6px 12px;">Install</button>
+    </div>
+  </header>
 
-    <!-- ─── HOME ─────────────────────────────────────────────── -->
-    <main id="page-home" class="page active">
-
-      <section id="home-hero-section">
-        <!-- filled by app.js after data loads -->
-      </section>
-
-      <div class="stats-strip" id="home-stats-strip">
-        <div class="stat-tile">
-          <div class="stat-tile-num" data-stat="countries">—</div>
-          <div class="stat-tile-label">Countries</div>
-        </div>
-        <div class="stat-tile">
-          <div class="stat-tile-num" data-stat="regions">—</div>
-          <div class="stat-tile-label">Regions</div>
-        </div>
-        <div class="stat-tile">
-          <div class="stat-tile-num" data-stat="languages">—</div>
-          <div class="stat-tile-label">Languages</div>
-        </div>
-      </div>
-
-      <div class="quick-links" id="quick-links">
-        <button class="quick-link-card" data-nav="countries">
-          <span class="quick-link-icon">🌍</span>
-          <div>
-            <div class="quick-link-label">Browse</div>
-            <div class="quick-link-sub">All countries</div>
-          </div>
-        </button>
-        <button class="quick-link-card" data-nav="compare">
-          <span class="quick-link-icon">📏</span>
-          <div>
-            <div class="quick-link-label">Compare</div>
-            <div class="quick-link-sub">Distance &amp; stats</div>
-          </div>
-        </button>
-        <button class="quick-link-card" data-nav="games">
-          <span class="quick-link-icon">🚩</span>
-          <div>
-            <div class="quick-link-label">Flag Flash</div>
-            <div class="quick-link-sub">Guess the flag</div>
-          </div>
-        </button>
-        <button class="quick-link-card" data-nav="games">
-          <span class="quick-link-icon">📏</span>
-          <div>
-            <div class="quick-link-label">Distance Duel</div>
-            <div class="quick-link-sub">Closer or farther?</div>
-          </div>
-        </button>
-      </div>
-
-      <div style="background:var(--bg-surface);border:1px solid var(--border-subtle);
-                  border-radius:var(--r-xl);padding:var(--sp-5);margin-top:var(--sp-2);">
-        <div class="t-label mb-3" style="color:var(--text-muted);">About this app</div>
-        <p style="font-size:0.85rem;color:var(--text-secondary);line-height:1.7;margin-bottom:var(--sp-3);">
-          World Explorer is a free, offline-capable PWA with data on every country —
-          political, geographic, demographic, and economic. No ads, no server, no cost.
-        </p>
-        <div style="display:flex;flex-wrap:wrap;gap:var(--sp-2);">
-          <span class="org-tag">REST Countries</span>
-          <span class="org-tag">World Bank</span>
-          <span class="org-tag">Wikidata</span>
-          <span class="org-tag">OpenStreetMap</span>
-          <span class="org-tag">Zero cost</span>
-          <span class="org-tag">Works offline</span>
-        </div>
-      </div>
-
-    </main>
-
-    <!-- ─── COUNTRIES ─────────────────────────────────────────── -->
-    <main id="page-countries" class="page"></main>
-
-    <!-- ─── DETAIL ───────────────────────────────────────────── -->
-    <main id="page-detail" class="page"></main>
-
-    <!-- ─── COMPARE ──────────────────────────────────────────── -->
-    <main id="page-compare" class="page"></main>
-
-    <!-- ─── GAMES ────────────────────────────────────────────── -->
-    <main id="page-games" class="page"></main>
-
-    <!-- Bottom nav -->
-    <nav id="bottom-nav">
-      <button class="nav-item active" data-page="home">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-          <polyline points="9 22 9 12 15 12 15 22"/>
-        </svg>
-        Home
+  <!-- HOME -->
+  <main id="page-home" class="page active">
+    <section id="home-hero-section"></section>
+    <div class="stats-strip" id="home-stats-strip">
+      <div class="stat-tile"><div class="stat-tile-num" data-stat="countries">—</div><div class="stat-tile-label">Countries</div></div>
+      <div class="stat-tile"><div class="stat-tile-num" data-stat="regions">—</div><div class="stat-tile-label">Regions</div></div>
+      <div class="stat-tile"><div class="stat-tile-num" data-stat="languages">—</div><div class="stat-tile-label">Languages</div></div>
+    </div>
+    <div class="quick-links">
+      <button class="quick-link-card" onclick="WX.go('countries')">
+        <span class="quick-link-icon">🌍</span>
+        <div><div class="quick-link-label">Browse</div><div class="quick-link-sub">All countries</div></div>
       </button>
-      <button class="nav-item" data-page="countries">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="10"/>
-          <line x1="2" y1="12" x2="22" y2="12"/>
-          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
-        </svg>
-        Countries
+      <button class="quick-link-card" onclick="WX.go('compare')">
+        <span class="quick-link-icon">📏</span>
+        <div><div class="quick-link-label">Compare</div><div class="quick-link-sub">Distance &amp; stats</div></div>
       </button>
-      <button class="nav-item" data-page="compare">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="18" y1="20" x2="18" y2="10"/>
-          <line x1="12" y1="20" x2="12" y2="4"/>
-          <line x1="6"  y1="20" x2="6"  y2="14"/>
-        </svg>
-        Compare
+      <button class="quick-link-card" onclick="WX.go('games')">
+        <span class="quick-link-icon">🚩</span>
+        <div><div class="quick-link-label">Flag Flash</div><div class="quick-link-sub">Guess the flag</div></div>
       </button>
-      <button class="nav-item" data-page="games">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="2" y="6" width="20" height="12" rx="2"/>
-          <path d="M12 12h.01M7 12h.01"/>
-          <path d="M17 10v4M15 12h4"/>
-        </svg>
-        Games
+      <button class="quick-link-card" onclick="WX.go('games')">
+        <span class="quick-link-icon">📏</span>
+        <div><div class="quick-link-label">Distance Duel</div><div class="quick-link-sub">Closer or farther?</div></div>
       </button>
-    </nav>
-
-  </div><!-- /#app -->
-
-  <!-- Toast -->
-  <div id="toast-container" aria-live="polite"></div>
-
-  <!-- Home picker modal -->
-  <div id="home-picker-modal" class="modal-overlay" role="dialog" aria-modal="true">
-    <div class="modal-sheet">
-      <div class="modal-header">
-        <div class="modal-title">🏠 Choose Your Home Country</div>
-        <div class="search-wrap" style="margin-bottom:0;">
-          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="11" cy="11" r="8"/>
-            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-          </svg>
-          <input id="picker-search" class="search-input" type="search"
-                 placeholder="Search your country…" autocomplete="off">
-        </div>
-      </div>
-      <div class="modal-body">
-        <div class="picker-list" id="picker-list"></div>
-      </div>
-      <div style="padding:var(--sp-3) var(--sp-5);border-top:1px solid var(--border-subtle);">
-        <button id="picker-close-btn" class="btn btn-secondary btn-full">Cancel</button>
+    </div>
+    <div style="background:var(--bg-surface);border:1px solid var(--border-subtle);
+                border-radius:var(--r-xl);padding:var(--sp-5);margin-top:var(--sp-2);">
+      <div class="t-label mb-3" style="color:var(--text-muted);">About this app</div>
+      <p style="font-size:.85rem;color:var(--text-secondary);line-height:1.7;margin-bottom:var(--sp-3);">
+        World Explorer is a free, offline-capable PWA — political, geographic,
+        demographic and economic data on every country. No ads, no server, zero cost.
+      </p>
+      <div style="display:flex;flex-wrap:wrap;gap:var(--sp-2);">
+        <span class="org-tag">250+ Countries</span>
+        <span class="org-tag">World Bank</span>
+        <span class="org-tag">Wikidata</span>
+        <span class="org-tag">OpenStreetMap</span>
+        <span class="org-tag">Works offline</span>
       </div>
     </div>
+  </main>
+
+  <!-- COUNTRIES -->
+  <main id="page-countries" class="page"></main>
+
+  <!-- DETAIL -->
+  <main id="page-detail" class="page"></main>
+
+  <!-- COMPARE -->
+  <main id="page-compare" class="page"></main>
+
+  <!-- GAMES -->
+  <main id="page-games" class="page"></main>
+
+  <!-- SETTINGS -->
+  <main id="page-settings" class="page"></main>
+
+  <!-- Bottom nav -->
+  <nav id="bottom-nav">
+    <button class="nav-item active" data-page="home" onclick="WX.go('home')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+        <polyline points="9 22 9 12 15 12 15 22"/>
+      </svg>
+      Home
+    </button>
+    <button class="nav-item" data-page="countries" onclick="WX.go('countries')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="2" y1="12" x2="22" y2="12"/>
+        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+      </svg>
+      Countries
+    </button>
+    <button class="nav-item" data-page="compare" onclick="WX.go('compare')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="20" x2="18" y2="10"/>
+        <line x1="12" y1="20" x2="12" y2="4"/>
+        <line x1="6"  y1="20" x2="6"  y2="14"/>
+      </svg>
+      Compare
+    </button>
+    <button class="nav-item" data-page="games" onclick="WX.go('games')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="2" y="6" width="20" height="12" rx="2"/>
+        <path d="M12 12h.01M7 12h.01"/>
+        <path d="M17 10v4M15 12h4"/>
+      </svg>
+      Games
+    </button>
+    <button class="nav-item" data-page="settings" onclick="WX.go('settings')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+      </svg>
+      Settings
+    </button>
+  </nav>
+
+</div>
+
+<!-- Toast -->
+<div id="toast-container" aria-live="polite"></div>
+
+<!-- Home picker modal -->
+<div id="home-picker-modal" class="modal-overlay" role="dialog" aria-modal="true"
+     onclick="if(event.target===this)document.getElementById('picker-close-btn').click()">
+  <div class="modal-sheet">
+    <div class="modal-header">
+      <div class="modal-title">🏠 Choose Your Home Country</div>
+      <div class="search-wrap" style="margin-bottom:0;">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input id="picker-search" class="search-input" type="search"
+               placeholder="Search your country…" autocomplete="off">
+      </div>
+    </div>
+    <div class="modal-body">
+      <div class="picker-list" id="picker-list"></div>
+    </div>
+    <div style="padding:var(--sp-3) var(--sp-5);border-top:1px solid var(--border-subtle);">
+      <button id="picker-close-btn" class="btn btn-secondary btn-full">Cancel</button>
+    </div>
   </div>
+</div>
 
-  <!-- ═══ SCRIPTS ══════════════════════════════════════════════ -->
+<!-- Splash driver -->
+<script>
+(function(){
+  var fill=document.getElementById('sp-fill'),pct=0;
+  var iv=setInterval(function(){pct=Math.min(pct+(pct<70?9:2),92);if(fill)fill.style.width=pct+'%';},100);
+  var fb=setTimeout(done,10000);
+  function done(){
+    clearInterval(iv);clearTimeout(fb);
+    if(fill)fill.style.width='100%';
+    setTimeout(function(){
+      var s=document.getElementById('splash');if(!s)return;
+      s.classList.add('out');
+      setTimeout(function(){s&&s.parentNode&&s.parentNode.removeChild(s);},400);
+    },180);
+  }
+  window.__hideSplash=done;
+})();
+</script>
 
-  <!-- 1. Splash driver — runs immediately, no dependency on modules -->
-  <script>
-  (function () {
-    var fill = document.getElementById('sp-fill');
-    var pct  = 0;
-    var iv   = setInterval(function () {
-      pct = Math.min(pct + (pct < 70 ? 9 : 2), 92);
-      if (fill) fill.style.width = pct + '%';
-    }, 100);
-
-    function done() {
-      clearInterval(iv);
-      clearTimeout(fb);
-      if (fill) fill.style.width = '100%';
-      setTimeout(function () {
-        var s = document.getElementById('splash');
-        if (!s) return;
-        s.classList.add('out');
-        setTimeout(function () { if (s.parentNode) s.parentNode.removeChild(s); }, 400);
-      }, 180);
+<!-- WX global router shim -->
+<script>
+window.WX=(function(){
+  var q=[];
+  var impl={
+    go:function(p){q.push(['go',p]);},
+    _register:function(real){
+      Object.assign(impl,real);
+      q.forEach(function(item){var f=real[item[0]];if(f)f(item[1]);});
+      q=[];
     }
+  };
+  return impl;
+})();
+</script>
 
-    /* 10-second hard fallback */
-    var fb = setTimeout(done, 10000);
-    window.__hideSplash = done;
-  })();
-  </script>
-
-  <!-- 2. Quick-link and nav wiring — delegates to module once ready -->
-  <script>
-  document.getElementById('quick-links').addEventListener('click', function (e) {
-    var btn = e.target.closest('[data-nav]');
-    if (!btn) return;
-    if (window.__navigate) {
-      window.__navigate(btn.dataset.nav);
-    }
-  });
-  </script>
-
-  <!-- 3. Main ES module -->
-  <script type="module" src="js/app.js"></script>
+<script type="module" src="js/app.js"></script>
 
 </body>
 </html>

@@ -8,6 +8,7 @@ import { AppState, navigate, showToast, openHomePicker } from './app.js';
 import { loadWorldBankData, loadSharedOrgs,
          haversine, flagUrl, countryStats,
          fmtNumber, fmtArea }                            from './api.js';
+import { kmToDisplay } from './settings.js';
 
 /* ── State ───────────────────────────────────────────────────── */
 let _initialised  = false;
@@ -340,10 +341,10 @@ function _buildCompareHTML(home, target, sHome, sTarget, dist, orgs) {
   return `
     <!-- Distance badge -->
     <div class="distance-badge">
-      <div class="distance-num">${dist.toLocaleString()} km</div>
+      ${(() => { const d = kmToDisplay(dist); return `<div class="distance-num">${d.value} ${d.unit}</div>`; })()}
       <div class="distance-label">straight-line distance</div>
       <div style="font-size:0.75rem;color:var(--text-muted);margin-top:var(--sp-1);">
-        ≈ ${Math.round(dist / 900)} hrs by plane · ${Math.round(dist * 0.621).toLocaleString()} mi
+        ≈ ${Math.round(dist / 900)} hrs by plane
       </div>
     </div>
 

@@ -4,7 +4,7 @@
    Game 1: Flag Flash     — guess country from flag (timed)
    Game 2: Distance Duel  — which country is closer to home?
    Game 3: Capital Quiz   — guess the capital city
-   Game 4: Currency Match — which country uses this currency?
+   Game 4: Mystery Country— clue-by-clue country deduction
    Game 5: Mystery Country— clue-by-clue country deduction
    ============================================================ */
 
@@ -62,7 +62,6 @@ function _renderLobby() {
   const scoreItems = [
     { label:'Flag Flash',      val: scores.flag     ?? '—', icon:'🚩' },
     { label:'Capital Quiz',    val: scores.capital  ?? '—', icon:'🏙️' },
-    { label:'Currency Match',  val: scores.currency ?? '—', icon:'💱' },
     { label:'Mystery Country', val: scores.mystery  ?? '—', icon:'🔍' },
     { label:'Distance Duel',   val: scores.duel     ?? '—', icon:'📏' },
     { label:'Games Played',    val: scores.played   ?? 0,   icon:'🎮' },
@@ -71,7 +70,7 @@ function _renderLobby() {
   lobby.innerHTML = `
     <h2 class="t-heading mb-2" style="font-size:1.25rem;">Geography Games</h2>
     <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:var(--sp-5);">
-      5 games · all data loaded locally · no extra downloads
+      4 games · all data loaded locally · no extra downloads
     </p>
 
     <!-- High score strip -->
@@ -107,13 +106,6 @@ function _renderLobby() {
         <div class="game-meta"><span>⏱ 12s/round</span><span>🎯 ${ROUNDS} rounds</span></div>
       </div>
 
-      <div class="game-card" style="cursor:pointer;" id="start-currency-game">
-        <div class="game-emoji">💱</div>
-        <div class="game-title">Currency Match</div>
-        <div class="game-desc">A currency name and symbol appears — which country uses it? Zloty? Tugrik? Lempira? Test your money knowledge!</div>
-        <div class="game-meta"><span>⏱ 12s/round</span><span>🎯 ${ROUNDS} rounds</span></div>
-      </div>
-
       <div class="game-card" style="cursor:pointer;background:var(--bg-surface);" id="start-mystery-game">
         <div class="game-emoji">🔍</div>
         <div class="game-title">Mystery Country</div>
@@ -132,7 +124,6 @@ function _renderLobby() {
 
   document.getElementById('start-flag-game')    ?.addEventListener('click', _startFlagGame);
   document.getElementById('start-capital-game') ?.addEventListener('click', _startCapitalGame);
-  document.getElementById('start-currency-game')?.addEventListener('click', _startCurrencyGame);
   document.getElementById('start-mystery-game') ?.addEventListener('click', _startMysteryGame);
   document.getElementById('start-duel-game')   ?.addEventListener('click', () => {
     if (!AppState.homeCountry) { showToast('Please set your home country first!','info'); openHomePicker(); return; }
@@ -282,111 +273,7 @@ function _nextCapitalRound() {
 }
 
 /* ══════════════════════════════════════════════════════════════
-   GAME 4 — CURRENCY MATCH
-   A currency name + symbol is shown; pick the country that uses it.
-   Countries with unique, interesting currencies are weighted first.
-   ══════════════════════════════════════════════════════════════ */
-const CUR_TIMER_S = 12;
-
-function _startCurrencyGame() {
-  _activeGame = 'currency'; _round = 0; _score = 0;
-
-  /* Only countries that have exactly one currency with a real name */
-  const withCurrency = AppState.countries.filter(c =>
-    c.currencies?.length === 1 &&
-    c.currencies[0].name &&
-    c.currencies[0].name !== c.name &&
-    c.currencies[0].code !== 'USD'   /* skip dollarised countries — too easy */
-  );
-
-  _pool = _shuffled(withCurrency);
-  _showArena();
-  _nextCurrencyRound();
-}
-
-function _nextCurrencyRound() {
-  if (_round >= ROUNDS) { _endGame('currency'); return; }
-  _round++; _answered = false; _timerLeft = CUR_TIMER_S;
-
-  const correct  = _pool[_round - 1];
-  const currency = correct.currencies[0];
-  const options  = _pickOptions(correct, 4);
-
-  /* Build a display string: symbol (if interesting) + name + code */
-  const hasSymbol   = currency.symbol && currency.symbol !== currency.code;
-  const symbolLine  = hasSymbol
-    ? `<div style="font-size:2.6rem;font-weight:800;color:var(--accent);
-                   font-family:var(--font-display);letter-spacing:-0.02em;
-                   margin-bottom:var(--sp-2);line-height:1;">${currency.symbol}</div>`
-    : '';
-
-  _arenaHTML(`
-    ${_hud()}
-    ${_timerBar(CUR_TIMER_S)}
-
-    <!-- Currency display card -->
-    <div style="background:var(--bg-surface);border:1px solid var(--border-strong);
-                border-radius:var(--r-xl);padding:var(--sp-6);margin-bottom:var(--sp-5);
-                text-align:center;position:relative;overflow:hidden;">
-      <!-- faint watermark -->
-      <div style="position:absolute;inset:0;display:grid;place-items:center;
-                  font-size:6rem;opacity:0.04;pointer-events:none;
-                  font-family:var(--font-display);font-weight:800;">
-        ${hasSymbol ? currency.symbol : '💱'}
-      </div>
-      ${symbolLine}
-      <div style="font-family:var(--font-display);font-weight:800;font-size:1.35rem;
-                  letter-spacing:-0.02em;color:var(--text-primary);margin-bottom:var(--sp-1);">
-        ${currency.name}
-      </div>
-      <div style="display:inline-block;background:var(--bg-overlay);
-                  border:1px solid var(--border-mid);border-radius:var(--r-full);
-                  padding:3px 14px;font-family:var(--font-display);font-weight:700;
-                  font-size:0.8rem;color:var(--text-muted);letter-spacing:0.06em;">
-        ${currency.code}
-      </div>
-    </div>
-
-    <div class="game-question">Which country uses this currency?</div>
-
-    <div class="options-grid" id="opts">
-      ${options.map(c => `
-        <button class="option-btn" data-cca2="${c.cca2}" data-correct="${c.cca2 === correct.cca2}">
-          <div style="font-size:1.3rem;margin-bottom:4px;">
-            <img src="${flagUrl(c)}" alt=""
-                 style="height:22px;border-radius:2px;vertical-align:middle;
-                        margin-right:4px;object-fit:cover;">
-          </div>
-          ${c.name}
-        </button>`).join('')}
-    </div>
-
-    <div id="round-feedback" style="text-align:center;min-height:28px;
-         font-family:var(--font-display);font-weight:700;font-size:0.92rem;"></div>`);
-
-  _bindOptions(correct, () => {
-    if (_answered) return; _answered = true;
-    document.querySelectorAll('.option-btn').forEach(b => {
-      b.disabled = true;
-      if (b.dataset.correct === 'true') b.classList.add('correct');
-    });
-    _showFeedback(`⏱ Time's up! It's used in ${correct.name}`, 'var(--amber)');
-    setTimeout(_nextCurrencyRound, 1800);
-  });
-
-  _startTimer(() => {
-    if (_answered) return; _answered = true;
-    document.querySelectorAll('.option-btn').forEach(b => {
-      b.disabled = true;
-      if (b.dataset.correct === 'true') b.classList.add('correct');
-    });
-    _showFeedback(`⏱ Time's up! It's used in ${correct.name}`, 'var(--amber)');
-    setTimeout(_nextCurrencyRound, 1800);
-  }, CUR_TIMER_S);
-}
-
-/* ══════════════════════════════════════════════════════════════
-   GAME 5 — MYSTERY COUNTRY
+   GAME 4 — MYSTERY COUNTRY
    Reveal clues one by one; guess with fewest clues for max pts
    Max points: 6 (guess on clue 1) → 1 (guess on clue 6)
    ══════════════════════════════════════════════════════════════ */
@@ -726,7 +613,7 @@ function _arenaHTML(html) {
 
 function _endGame(gameType) {
   _stopTimer();
-  const maxMap = { flag: ROUNDS * FLAG_TIMER_S, capital: ROUNDS * CAP_TIMER_S, currency: ROUNDS * CUR_TIMER_S, mystery: ROUNDS * 6, duel: ROUNDS };
+  const maxMap = { flag: ROUNDS * FLAG_TIMER_S, capital: ROUNDS * CAP_TIMER_S, mystery: ROUNDS * 6, duel: ROUNDS };
   const max    = maxMap[gameType] || ROUNDS;
   const pct    = Math.round((_score / max) * 100);
   const emoji  = pct >= 80 ? '🏆' : pct >= 50 ? '🌍' : pct >= 30 ? '🗺️' : '📚';
@@ -737,7 +624,7 @@ function _endGame(gameType) {
   scores.played = (scores.played || 0) + 1;
   _saveScores(scores);
 
-  const gameTitles = { flag:'Flag Flash', capital:'Capital Quiz', currency:'Currency Match', mystery:'Mystery Country', duel:'Distance Duel' };
+  const gameTitles = { flag:'Flag Flash', capital:'Capital Quiz', mystery:'Mystery Country', duel:'Distance Duel' };
   const arena = document.getElementById('game-arena');
   if (!arena) return;
 
@@ -771,7 +658,7 @@ function _endGame(gameType) {
       </div>
     </div>`;
 
-  const restarters = { flag:_startFlagGame, capital:_startCapitalGame, currency:_startCurrencyGame, mystery:_startMysteryGame, duel:_startDuelGame };
+  const restarters = { flag:_startFlagGame, capital:_startCapitalGame, mystery:_startMysteryGame, duel:_startDuelGame };
   document.getElementById('play-again-btn')?.addEventListener('click', restarters[gameType]);
   document.getElementById('back-lobby-btn')?.addEventListener('click', _renderLobby);
 }

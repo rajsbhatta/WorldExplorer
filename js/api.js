@@ -352,3 +352,55 @@ export function countryStats(country, wb) {
 }
 
 export const REGIONS = ['All','Africa','Americas','Asia','Europe','Oceania'];
+
+/* ══════════════════════════════════════════════════════════════
+   WIKIPEDIA SUMMARY
+   Uses the Wikipedia REST summary API — free, no key, CORS OK.
+   Returns 2-4 sentence encyclopedic description.
+   ══════════════════════════════════════════════════════════════ */
+export async function loadWikiSummary(countryName) {
+  const cacheKey = `wiki:${countryName}`;
+  const cached   = await cGet(cacheKey);
+  if (cached) return cached;
+
+  /* Wikipedia titles sometimes differ from country common names.
+     Try the direct name first, then a few common fallbacks. */
+  const candidates = [
+    countryName,
+    countryName + ' (country)',
+    countryName.replace(/ /g, '_'),
+  ];
+
+  for (const title of candidates) {
+    try {
+      const encoded = encodeURIComponent(title.replace(/ /g, '_'));
+      const url     = `https://en.wikipedia.org/api/rest_v1/page/summary/${encoded}`;
+      const res     = await safeFetch(url, {
+        headers: { Accept: 'application/json' }
+      }, 10000);
+
+      if (!res.ok) continue;
+      const json = await res.json();
+
+      /* Skip disambiguation pages */
+      if (json.type === 'disambiguation') continue;
+
+      const extract = json.extract?.trim();
+      if (!extract || extract.length < 40) continue;
+
+      /* Clean up — remove citation markers like [1], [note 1] */
+      const clean = extract.replace(/\[\d+\]|\[note \d+\]/g, '').trim();
+
+      const result = {
+        extract:   clean,
+        thumbnail: json.thumbnail?.source || null,
+        url:       json.content_urls?.desktop?.page || null,
+      };
+
+      await cSet(cacheKey, result, 14 * 86400000); /* cache 14 days */
+      return result;
+    } catch { /* try next candidate */ }
+  }
+
+  return null;
+}

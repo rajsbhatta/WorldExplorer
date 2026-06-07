@@ -6,6 +6,7 @@
 import { AppState, navigate, showToast }           from './app.js';
 import { getCountry, getCountriesByCca3,
          loadWorldBankData, loadWikidataPolitical,
+         loadWikiSummary,
          flagUrl, fmtNumber, fmtArea, fmtWB }      from './api.js';
 
 /* ── Entry point ─────────────────────────────────────────────── */
@@ -33,6 +34,10 @@ export async function initDetailPage(cca2) {
 
     loadWikidataPolitical(country.name).then(pol => {
       _fillPoliticalTab(country, pol);
+    });
+
+    loadWikiSummary(country.name).then(wiki => {
+      _fillWikiSummary(wiki, country);
     });
 
     _activateTab('overview');
@@ -140,6 +145,39 @@ function _fillDemographyCards(wb) {
   if (lifeEl    && wb?.lifeExp  != null) lifeEl.textContent    = fmtWB('lifeExp', wb.lifeExp);
 }
 
+
+/* ── Wikipedia summary ───────────────────────────────────────── */
+function _fillWikiSummary(wiki, country) {
+  const block = document.getElementById('wiki-summary-block');
+  if (!block) return;
+
+  if (!wiki?.extract) {
+    block.innerHTML = '';
+    return;
+  }
+
+  block.innerHTML = `
+    <div style="background:var(--bg-surface);border:1px solid var(--border-subtle);
+                border-left:3px solid var(--accent);border-radius:var(--r-md);
+                padding:var(--sp-4) var(--sp-5);margin-bottom:var(--sp-2);">
+      <p style="font-size:0.9rem;color:var(--text-secondary);line-height:1.75;margin:0;">
+        ${wiki.extract}
+      </p>
+    </div>
+    ${wiki.url ? `
+      <a href="${wiki.url}" target="_blank" rel="noopener noreferrer"
+         style="font-size:0.72rem;color:var(--text-muted);font-family:var(--font-display);
+                font-weight:600;letter-spacing:0.04em;display:inline-flex;
+                align-items:center;gap:4px;text-decoration:none;margin-bottom:var(--sp-2);">
+        📖 Read more on Wikipedia
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2.5">
+          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+          <polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+        </svg>
+      </a>` : ''}`;
+}
+
 function _fillPoliticalTab(country, pol) {
   const tab = document.getElementById('tab-political');
   if (!tab) return;
@@ -243,6 +281,13 @@ function _renderDetail(c) {
 
     <div class="tab-panel" id="tab-overview">
       <div class="section-head"><div class="section-icon">🌐</div><h3>Overview</h3></div>
+
+      <!-- Wikipedia summary — filled async -->
+      <div id="wiki-summary-block" style="margin-bottom:var(--sp-5);">
+        <div class="skeleton" style="height:18px;width:90%;margin-bottom:8px;"></div>
+        <div class="skeleton" style="height:18px;width:75%;margin-bottom:8px;"></div>
+        <div class="skeleton" style="height:18px;width:82%;"></div>
+      </div>
       <div class="info-grid">
         ${_infoCard('Official Name', c.officialName)}
         ${_infoCard('CCA2 Code',     c.cca2)}

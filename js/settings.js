@@ -121,8 +121,21 @@ export function initSettingsPage() {
         <div class="settings-row-left">
           <div class="settings-row-icon">🗑️</div>
           <div>
-            <div class="settings-row-label">Clear Cache</div>
+            <div class="settings-row-label">Clear Data Cache</div>
             <div class="settings-row-sub">Re-fetch all country data fresh</div>
+          </div>
+        </div>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2">
+          <polyline points="9 18 15 12 9 6"/>
+        </svg>
+      </div>
+
+      <div class="settings-row clickable" id="update-app-row">
+        <div class="settings-row-left">
+          <div class="settings-row-icon">🔄</div>
+          <div>
+            <div class="settings-row-label">Check for Updates</div>
+            <div class="settings-row-sub">Clear app cache and reload latest version</div>
           </div>
         </div>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2">
@@ -257,11 +270,38 @@ function _bindSettings() {
     if (btn) { btn.textContent = 'Installed'; btn.disabled = true; btn.style.opacity = '0.5'; }
   }
 
-  /* Clear cache */
+  /* Clear data cache */
   document.getElementById('clear-cache-row')?.addEventListener('click', async () => {
     const { clearAllCache } = await import('./api.js');
     await clearAllCache();
     showToast('Cache cleared — data will refresh on next load', 'success');
+  });
+
+  /* Check for updates — clears SW cache then reloads */
+  document.getElementById('update-app-row')?.addEventListener('click', async () => {
+    showToast('Checking for updates…', 'info', 1500);
+    try {
+      /* Tell the service worker to clear its caches */
+      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        const channel = new MessageChannel();
+        navigator.serviceWorker.controller.postMessage(
+          { type: 'CLEAR_DATA_CACHE' }, [channel.port2]
+        );
+      }
+      /* Also clear all SW caches via the Cache API */
+      if ('caches' in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map(k => caches.delete(k)));
+      }
+      /* Clear IndexedDB data cache too */
+      const { clearAllCache } = await import('./api.js');
+      await clearAllCache();
+
+      showToast('Updated! Reloading…', 'success', 1200);
+      setTimeout(() => location.reload(true), 1300);
+    } catch(e) {
+      showToast('Could not clear cache — try a manual refresh', 'error');
+    }
   });
 
   /* Feedback form */

@@ -1,11 +1,14 @@
 /* ============================================================
    World Explorer — Games  (js/games.js)
 
-   Game 1: Flag Flash     — guess country from flag (timed)
-   Game 2: Distance Duel  — which country is closer to home?
-   Game 3: Capital Quiz   — guess the capital city
-   Game 4: Mystery Country— clue-by-clue country deduction
-   Game 5: Mystery Country— clue-by-clue country deduction
+   Game 1: Flag Flash      — guess country from flag (timed)
+   Game 2: Distance Duel   — which country is closer to home?
+   Game 3: Capital Quiz    — guess the capital city
+   Game 4: Mystery Country — clue-by-clue country deduction
+
+   High scores stored in localStorage (worldex:hiscores2) —
+   separate from the API cache so they survive cache clears
+   and app updates.
    ============================================================ */
 
 import { AppState, showToast, openHomePicker } from './app.js';
@@ -68,7 +71,20 @@ function _renderLobby() {
   ];
 
   lobby.innerHTML = `
-    <h2 class="t-heading mb-2" style="font-size:1.25rem;">Geography Games</h2>
+    <div style="display:flex;align-items:center;justify-content:space-between;
+                gap:var(--sp-3);margin-bottom:var(--sp-2);flex-wrap:wrap;">
+      <h2 class="t-heading" style="font-size:1.25rem;">Geography Games</h2>
+      <button id="reset-scores-btn"
+              style="background:none;border:1px solid var(--border-mid);
+                     border-radius:var(--r-full);padding:5px 14px;
+                     font-family:var(--font-display);font-weight:600;
+                     font-size:0.7rem;letter-spacing:0.04em;color:var(--text-muted);
+                     cursor:pointer;transition:all var(--tx-fast);"
+              onmouseover="this.style.borderColor='var(--coral)';this.style.color='var(--coral)'"
+              onmouseout="this.style.borderColor='var(--border-mid)';this.style.color='var(--text-muted)'">
+        Reset Scores
+      </button>
+    </div>
     <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:var(--sp-5);">
       4 games · all data loaded locally · no extra downloads
     </p>
@@ -128,6 +144,13 @@ function _renderLobby() {
   document.getElementById('start-duel-game')   ?.addEventListener('click', () => {
     if (!AppState.homeCountry) { showToast('Please set your home country first!','info'); openHomePicker(); return; }
     _startDuelGame();
+  });
+
+  document.getElementById('reset-scores-btn')?.addEventListener('click', () => {
+    if (!confirm('Reset all your high scores? This cannot be undone.')) return;
+    resetScores();
+    _renderLobby();   /* re-render lobby to show cleared scores */
+    showToast('Scores reset', 'info');
   });
 }
 
@@ -716,4 +739,9 @@ function _loadScores() {
 
 function _saveScores(s) {
   localStorage.setItem(LS_SCORES, JSON.stringify(s));
+}
+
+/** Public — called from settings page */
+export function resetScores() {
+  localStorage.removeItem(LS_SCORES);
 }

@@ -9,7 +9,8 @@ import { getCountry, getCountriesByCca3,
          loadWorldBankData, loadWikidataPolitical,
          loadWikiSummary, flagUrl,
          fmtNumber, fmtArea, fmtWB,
-         getStamp, setStamp }                      from './api.js';
+         getStamp, setStamp,
+         getCitizenships, isCitizen }              from './api.js';
 
 /* ── Entry point ─────────────────────────────────────────────── */
 export async function initDetailPage(cca2) {
@@ -172,8 +173,11 @@ function _fillPoliticalTab(country, pol) {
 
 /* ── Passport stamp UI ───────────────────────────────────────── */
 function _stampHTML(cca2) {
-  const stamp = getStamp(cca2);
-  const type  = stamp?.type || null;
+  const stamp        = getStamp(cca2);
+  const type         = stamp?.type || null;
+  const citizenships = getCitizenships();
+  const maxCitizens  = citizenships.length >= 2 && !citizenships.includes(cca2);
+
   return `
     <div class="stamp-bar" id="stamp-bar">
       <button class="stamp-btn ${type === 'visited' ? 'active visited' : ''}"
@@ -186,21 +190,30 @@ function _stampHTML(cca2) {
         <span class="stamp-icon">⭐</span>
         <span class="stamp-label">Wish List</span>
       </button>
+      ${!maxCitizens ? `
+      <button class="stamp-btn ${type === 'citizen' ? 'active citizen' : ''}"
+              id="stamp-citizen" data-type="citizen" title="Mark as citizen">
+        <span class="stamp-icon">🛂</span>
+        <span class="stamp-label">Citizen</span>
+      </button>` : ''}
     </div>`;
 }
 
 function _stampOverlayHTML(cca2) {
   const stamp = getStamp(cca2);
   if (!stamp) return '';
+  const isCit     = stamp.type === 'citizen';
   const isVisited = stamp.type === 'visited';
   const year      = stamp.year || new Date().getFullYear();
+  const cls       = isCit ? 'stamp-citizen' : isVisited ? 'stamp-visited' : 'stamp-wishlist';
+  const emoji     = isCit ? '🛂' : isVisited ? '✈️' : '⭐';
+  const label     = isCit ? 'CITIZEN' : isVisited ? 'VISITED' : 'WISH LIST';
   return `
-    <div class="stamp-overlay ${isVisited ? 'stamp-visited' : 'stamp-wishlist'}"
-         aria-label="${isVisited ? 'Visited' : 'Wish List'}">
+    <div class="stamp-overlay ${cls}" aria-label="${label}">
       <div class="stamp-ring">
         <div class="stamp-inner">
-          <div class="stamp-emoji">${isVisited ? '✈️' : '⭐'}</div>
-          <div class="stamp-text">${isVisited ? 'VISITED' : 'WISH LIST'}</div>
+          <div class="stamp-emoji">${emoji}</div>
+          <div class="stamp-text">${label}</div>
           <div class="stamp-year">${year}</div>
         </div>
       </div>
@@ -253,6 +266,42 @@ function _askVisitYear() {
   });
 }
 
+function _askDualCitizenship(existingCca2) {
+  return new Promise(resolve => {
+    const existing = AppState.countries.find(c => c.cca2 === existingCca2);
+    const name     = existing?.name || existingCca2;
+    const overlay  = document.createElement('div');
+    overlay.style.cssText = `position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.65);
+      backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:24px;`;
+    overlay.innerHTML = `
+      <div style="background:var(--bg-surface);border:1px solid var(--border-mid);
+                  border-radius:var(--r-xl);padding:var(--sp-6);width:100%;max-width:340px;
+                  animation:fadeUp 280ms ease both;">
+        <div style="font-family:var(--font-display);font-weight:800;font-size:1.05rem;
+                    color:var(--text-primary);margin-bottom:var(--sp-3);">
+          🛂 Citizenship Conflict
+        </div>
+        <p style="font-size:0.85rem;color:var(--text-secondary);line-height:1.6;margin-bottom:var(--sp-5);">
+          You are already a citizen of <strong>${name}</strong>. What would you like to do?
+        </p>
+        <div style="display:flex;flex-direction:column;gap:var(--sp-3);">
+          <button id="cit-dual" class="btn btn-primary btn-full">
+            Add as Dual Citizenship
+          </button>
+          <button id="cit-replace" class="btn btn-secondary btn-full">
+            Replace — Remove ${name}
+          </button>
+          <button id="cit-cancel" class="btn btn-ghost btn-full">Cancel</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    overlay.querySelector('#cit-dual')   .addEventListener('click', () => { document.body.removeChild(overlay); resolve('dual'); });
+    overlay.querySelector('#cit-replace').addEventListener('click', () => { document.body.removeChild(overlay); resolve('replace'); });
+    overlay.querySelector('#cit-cancel') .addEventListener('click', () => { document.body.removeChild(overlay); resolve(null); });
+    overlay.addEventListener('click', e => { if (e.target === overlay) { document.body.removeChild(overlay); resolve(null); } });
+  });
+}
+
 function _bindStampButtons(cca2) {
   document.querySelectorAll('.stamp-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
@@ -269,10 +318,27 @@ function _bindStampButtons(cca2) {
       }
 
       if (type === 'visited') {
-        /* Ask for year first */
         const year = await _askVisitYear();
-        if (year === null) return; /* cancelled */
+        if (year === null) return;
         setStamp(cca2, 'visited', year);
+      } else if (type === 'citizen') {
+        const citizenships = getCitizenships();
+        const alreadyHas   = citizenships.includes(cca2);
+
+        if (!alreadyHas && citizenships.length === 1) {
+          /* One existing citizenship — ask: replace or dual? */
+          const other = citizenships[0];
+          const choice = await _askDualCitizenship(other);
+          /* choice: 'replace' | 'dual' | null */
+          if (choice === null) return;
+          if (choice === 'replace') {
+            setStamp(other, null);   /* remove old */
+          }
+          /* both 'replace' and 'dual' then stamp the new one */
+          setStamp(cca2, 'citizen');
+        } else {
+          setStamp(cca2, 'citizen');
+        }
       } else {
         setStamp(cca2, 'wishlist');
       }

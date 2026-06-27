@@ -155,6 +155,29 @@ export function initSettingsPage() {
       </div>
     </div>
 
+   <!-- ── About ── -->
+    <div class="settings-section">
+      <div class="settings-section-title">About This App</div>
+      <div class="settings-row">
+        <div class="settings-row-left">
+          <div style="font-size:.85rem;color:var(--text-secondary);line-height:1.7;">
+            World Explorer is a free, offline-capable PWA — political, geographic,
+            demographic and economic data on every country. No ads, no server, zero cost.
+          </div>
+        </div>
+      </div>
+      <div class="settings-row">
+        <div style="display:flex;flex-wrap:wrap;gap:var(--sp-2);padding:0 0 var(--sp-2);">
+          <span class="org-tag">250+ Countries</span>
+          <span class="org-tag">World Bank</span>
+          <span class="org-tag">Wikidata</span>
+          <span class="org-tag">OpenStreetMap</span>
+          <span class="org-tag">Works offline</span>
+          <span class="org-tag">No Ads</span>
+        </div>
+      </div>
+    </div>
+
     <!-- ── Data sources ── -->
     <div class="settings-section">
       <div class="settings-section-title">Data Sources</div>

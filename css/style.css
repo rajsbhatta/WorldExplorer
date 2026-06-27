@@ -718,6 +718,18 @@ h3 { font-size:clamp(1rem,2vw,1.2rem); }
 
 .stamp-overlay.stamp-visited  { color:var(--accent); }
 .stamp-overlay.stamp-wishlist { color:var(--amber);  }
+.stamp-overlay.stamp-citizen  { color:#a78bfa; }   /* soft purple */
+
+.stamp-btn.active.citizen {
+  background: rgba(167,139,250,0.15);
+  border-color: #a78bfa;
+  color: #a78bfa;
+}
+
+.card-stamp-badge.citizen {
+  background: rgba(167,139,250,0.15);
+  color: #a78bfa;
+}
 
 .stamp-inner {
   text-align:center;

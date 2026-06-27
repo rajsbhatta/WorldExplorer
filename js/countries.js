@@ -234,9 +234,11 @@ function _cardHTML(country) {
     <article class="country-card" role="listitem" data-cca2="${country.cca2}"
              tabindex="0" aria-label="${country.name}">
       ${isHome ? '<div class="card-home-badge">🏠 Home</div>' : ''}
-      ${stampBadge}
-      <img class="card-flag" src="${flag}" alt="Flag of ${country.name}" loading="lazy"
-           width="320" height="180">
+      <div style="position:relative;">
+         <img class="card-flag" src="${flag}" alt="Flag of ${country.name}" loading="lazy"
+             width="320" height="180">
+         ${stampBadge}
+      </div>
       <div class="card-body">
         <div class="card-name">${country.name}</div>
         <div class="card-capital">${country.capital}</div>

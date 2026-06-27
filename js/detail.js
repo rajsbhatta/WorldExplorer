@@ -204,7 +204,7 @@ function _stampOverlayHTML(cca2) {
   if (!stamp) return '';
   const isCit     = stamp.type === 'citizen';
   const isVisited = stamp.type === 'visited';
-  const year      = stamp.year || new Date().getFullYear();
+  const year = isCit ? '' : (stamp.year || new Date().getFullYear());
   const cls       = isCit ? 'stamp-citizen' : isVisited ? 'stamp-visited' : 'stamp-wishlist';
   const emoji     = isCit ? '🛂' : isVisited ? '✈️' : '⭐';
   const label     = isCit ? 'CITIZEN' : isVisited ? 'VISITED' : 'WISH LIST';
@@ -214,7 +214,7 @@ function _stampOverlayHTML(cca2) {
         <div class="stamp-inner">
           <div class="stamp-emoji">${emoji}</div>
           <div class="stamp-text">${label}</div>
-          <div class="stamp-year">${year}</div>
+          ${year ? `<div class="stamp-year">${year}</div>` : ''}
         </div>
       </div>
     </div>`;

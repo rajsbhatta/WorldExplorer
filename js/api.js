@@ -430,7 +430,7 @@ export function getStamp(cca2) {
   return raw;
 }
 
-/** type: 'visited' | 'wishlist' | null  year: number (only for visited) */
+/** type: 'visited' | 'wishlist | citizen' | null  year: number (only for visited) */
 export function setStamp(cca2, type, year) {
   const stamps = _loadStamps();
   if (type) stamps[cca2] = { type, year: year || new Date().getFullYear() };
@@ -440,4 +440,20 @@ export function setStamp(cca2, type, year) {
 
 export function getAllStamps() {
   return _loadStamps();
+}
+
+/** Returns array of cca2 codes that have citizen stamp (max 2) */
+export function getCitizenships() {
+  const stamps = _loadStamps();
+  return Object.entries(stamps)
+    .filter(([, v]) => {
+      const type = typeof v === 'string' ? v : v?.type;
+      return type === 'citizen';
+    })
+    .map(([cca2]) => cca2);
+}
+
+/** Returns true if this country already has a citizen stamp */
+export function isCitizen(cca2) {
+  return getCitizenships().includes(cca2);
 }

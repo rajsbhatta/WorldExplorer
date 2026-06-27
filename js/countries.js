@@ -214,14 +214,17 @@ function _loadMore() {
 function _cardHTML(country) {
   const isHome  = AppState.homeCountry?.cca2 === country.cca2;
   const isFav   = _favourites.has(country.cca2);
-  const stamps  = getAllStamps();
-  const stamp   = stamps[country.cca2];
-  const pop     = fmtNumber(country.population);
-  const flag    = flagUrl(country);
+  const stamps   = getAllStamps();
+  const rawStamp = stamps[country.cca2];
+  const stamp    = rawStamp
+    ? (typeof rawStamp === 'string' ? { type: rawStamp, year: null } : rawStamp)
+    : null;
+  const pop      = fmtNumber(country.population);
+  const flag     = flagUrl(country);
 
-  const stampBadge = stamp === 'visited'
-    ? `<div class="card-stamp-badge visited">✈️ Visited</div>`
-    : stamp === 'wishlist'
+  const stampBadge = stamp?.type === 'visited'
+    ? `<div class="card-stamp-badge visited">✈️ Visited${stamp.year ? ' ' + stamp.year : ''}</div>`
+    : stamp?.type === 'wishlist'
       ? `<div class="card-stamp-badge wishlist">⭐ Wish List</div>`
       : '';
 

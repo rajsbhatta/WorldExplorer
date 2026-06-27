@@ -172,15 +172,16 @@ function _fillPoliticalTab(country, pol) {
 
 /* ── Passport stamp UI ───────────────────────────────────────── */
 function _stampHTML(cca2) {
-  const current = getStamp(cca2);
+  const stamp = getStamp(cca2);
+  const type  = stamp?.type || null;
   return `
     <div class="stamp-bar" id="stamp-bar">
-      <button class="stamp-btn ${current === 'visited' ? 'active visited' : ''}"
+      <button class="stamp-btn ${type === 'visited' ? 'active visited' : ''}"
               id="stamp-visited" data-type="visited" title="Mark as visited">
         <span class="stamp-icon">✈️</span>
-        <span class="stamp-label">Visited</span>
+        <span class="stamp-label">Visited${type === 'visited' && stamp?.year ? ' · ' + stamp.year : ''}</span>
       </button>
-      <button class="stamp-btn ${current === 'wishlist' ? 'active wishlist' : ''}"
+      <button class="stamp-btn ${type === 'wishlist' ? 'active wishlist' : ''}"
               id="stamp-wishlist" data-type="wishlist" title="Add to wish list">
         <span class="stamp-icon">⭐</span>
         <span class="stamp-label">Wish List</span>
@@ -191,7 +192,8 @@ function _stampHTML(cca2) {
 function _stampOverlayHTML(cca2) {
   const stamp = getStamp(cca2);
   if (!stamp) return '';
-  const isVisited = stamp === 'visited';
+  const isVisited = stamp.type === 'visited';
+  const year      = stamp.year || new Date().getFullYear();
   return `
     <div class="stamp-overlay ${isVisited ? 'stamp-visited' : 'stamp-wishlist'}"
          aria-label="${isVisited ? 'Visited' : 'Wish List'}">
@@ -199,53 +201,113 @@ function _stampOverlayHTML(cca2) {
         <div class="stamp-inner">
           <div class="stamp-emoji">${isVisited ? '✈️' : '⭐'}</div>
           <div class="stamp-text">${isVisited ? 'VISITED' : 'WISH LIST'}</div>
-          <div class="stamp-year">${new Date().getFullYear()}</div>
+          <div class="stamp-year">${year}</div>
         </div>
       </div>
     </div>`;
 }
 
-function _bindStampButtons(cca2) {
-  document.querySelectorAll('.stamp-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const type    = btn.dataset.type;
-      const current = getStamp(cca2);
-      const next    = current === type ? null : type;
+function _askVisitYear() {
+  const currentYear = new Date().getFullYear();
+  return new Promise(resolve => {
+    /* Build inline year-picker modal */
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.65);
+      backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:24px;`;
 
-      setStamp(cca2, next);
+    const years = Array.from({ length: 50 }, (_, i) => currentYear - i);
+    overlay.innerHTML = `
+      <div style="background:var(--bg-surface);border:1px solid var(--border-mid);
+                  border-radius:var(--r-xl);padding:var(--sp-6);width:100%;max-width:320px;
+                  animation:fadeUp 280ms ease both;">
+        <div style="font-family:var(--font-display);font-weight:800;font-size:1.1rem;
+                    color:var(--text-primary);margin-bottom:var(--sp-2);">
+          ✈️ When did you visit?
+        </div>
+        <p style="font-size:0.83rem;color:var(--text-secondary);margin-bottom:var(--sp-5);">
+          Select the year of your visit. This will appear on your stamp.
+        </p>
+        <select id="year-picker" class="form-select" style="margin-bottom:var(--sp-5);">
+          ${years.map(y => `<option value="${y}"${y === currentYear ? ' selected' : ''}>${y}</option>`).join('')}
+        </select>
+        <div style="display:flex;gap:var(--sp-3);">
+          <button id="year-cancel" class="btn btn-secondary btn-full">Cancel</button>
+          <button id="year-confirm" class="btn btn-primary btn-full">Stamp It!</button>
+        </div>
+      </div>`;
 
-      /* Update stamp buttons */
-      document.querySelectorAll('.stamp-btn').forEach(b => {
-        b.classList.toggle('active', next === b.dataset.type);
-        b.classList.toggle('visited',  b.dataset.type === 'visited'  && next === 'visited');
-        b.classList.toggle('wishlist', b.dataset.type === 'wishlist' && next === 'wishlist');
-      });
+    document.body.appendChild(overlay);
 
-      /* Update stamp overlay on flag */
-      const hero = document.getElementById('stamp-overlay-wrap');
-      if (hero) {
-        hero.innerHTML = _stampOverlayHTML(cca2);
-      }
-
-      const msgs = {
-        visited:  `✈️ ${document.title.split(' – ')[0]} marked as visited!`,
-        wishlist: `⭐ Added to wish list!`,
-        null:     'Stamp removed',
-      };
-      showToast(msgs[next] || 'Stamp removed', next ? 'success' : 'info', 2000);
+    overlay.querySelector('#year-confirm').addEventListener('click', () => {
+      const year = parseInt(overlay.querySelector('#year-picker').value);
+      document.body.removeChild(overlay);
+      resolve(year);
+    });
+    overlay.querySelector('#year-cancel').addEventListener('click', () => {
+      document.body.removeChild(overlay);
+      resolve(null);
+    });
+    overlay.addEventListener('click', e => {
+      if (e.target === overlay) { document.body.removeChild(overlay); resolve(null); }
     });
   });
+}
+
+function _bindStampButtons(cca2) {
+  document.querySelectorAll('.stamp-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const type    = btn.dataset.type;
+      const current = getStamp(cca2);
+      const isToggleOff = current?.type === type;
+
+      if (isToggleOff) {
+        /* Remove stamp */
+        setStamp(cca2, null);
+        _refreshStampUI(cca2);
+        showToast('Stamp removed', 'info', 2000);
+        return;
+      }
+
+      if (type === 'visited') {
+        /* Ask for year first */
+        const year = await _askVisitYear();
+        if (year === null) return; /* cancelled */
+        setStamp(cca2, 'visited', year);
+      } else {
+        setStamp(cca2, 'wishlist');
+      }
+
+      _refreshStampUI(cca2);
+      const msgs = {
+        visited:  `✈️ Stamped as visited!`,
+        wishlist: `⭐ Added to wish list!`,
+      };
+      showToast(msgs[type], 'success', 2000);
+    });
+  });
+}
+
+function _refreshStampUI(cca2) {
+  /* Rebuild stamp bar */
+  const bar = document.getElementById('stamp-bar');
+  if (bar) bar.outerHTML = _stampHTML(cca2);
+  _bindStampButtons(cca2); /* rebind after outerHTML swap */
+
+  /* Update overlay */
+  const wrap = document.getElementById('stamp-overlay-wrap');
+  if (wrap) wrap.innerHTML = _stampOverlayHTML(cca2);
 }
 
 /* ── PDF download ────────────────────────────────────────────── */
 function _downloadPDF(c, wb) {
   /* Build a self-contained print window */
-  const stamp    = getStamp(c.cca2);
+  const stamp     = getStamp(c.cca2);
+  const stampYear = stamp?.year || new Date().getFullYear();
   const stampHtml = stamp ? `
-    <div class="stamp-overlay-print ${stamp}">
+    <div class="stamp-overlay-print ${stamp.type}">
       <div class="stamp-ring-print">
-        ${stamp === 'visited' ? '✈️ VISITED' : '⭐ WISH LIST'}<br>
-        <span style="font-size:11px;">${new Date().getFullYear()}</span>
+        ${stamp.type === 'visited' ? '✈️ VISITED' : '⭐ WISH LIST'}<br>
+        <span style="font-size:11px;">${stampYear}</span>
       </div>
     </div>` : '';
 
@@ -429,8 +491,7 @@ function _renderDetail(c) {
                  🏠 Set as Home
                </button>`}
           ${_stampHTML(c.cca2)}
-        </div>
-      </div>
+        </div>      </div>
     </div>
 
     <!-- Tabs -->

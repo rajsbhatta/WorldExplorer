@@ -407,7 +407,8 @@ export async function loadWikiSummary(countryName) {
 
 /* ══════════════════════════════════════════════════════════════
    PASSPORT STAMPS  (localStorage only — never cleared by cache)
-   Values: 'visited' | 'wishlist' | null
+   Schema: { [cca2]: { type: 'visited'|'wishlist', year: number } }
+   Backward-compat: old string values are normalised on read.
    ══════════════════════════════════════════════════════════════ */
 const LS_STAMPS = 'worldex:stamps';
 
@@ -420,14 +421,19 @@ function _saveStamps(stamps) {
   localStorage.setItem(LS_STAMPS, JSON.stringify(stamps));
 }
 
+/** Returns { type, year } or null */
 export function getStamp(cca2) {
-  return _loadStamps()[cca2] || null;
+  const raw = _loadStamps()[cca2];
+  if (!raw) return null;
+  /* normalise old string format */
+  if (typeof raw === 'string') return { type: raw, year: new Date().getFullYear() };
+  return raw;
 }
 
-export function setStamp(cca2, type) {
-  /* type: 'visited' | 'wishlist' | null (removes stamp) */
+/** type: 'visited' | 'wishlist' | null  year: number (only for visited) */
+export function setStamp(cca2, type, year) {
   const stamps = _loadStamps();
-  if (type) stamps[cca2] = type;
+  if (type) stamps[cca2] = { type, year: year || new Date().getFullYear() };
   else delete stamps[cca2];
   _saveStamps(stamps);
 }

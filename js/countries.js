@@ -226,8 +226,10 @@ function _cardHTML(country) {
     ? `<div class="card-stamp-badge visited">✈️ Visited${stamp.year ? ' ' + stamp.year : ''}</div>`
     : stamp?.type === 'wishlist'
       ? `<div class="card-stamp-badge wishlist">⭐ Wish List</div>`
-      : '';
-
+      : stamp?.type === 'citizen'
+        ? `<div class="card-stamp-badge citizen">🛂 Citizen</div>`
+        : '';
+   
   return `
     <article class="country-card" role="listitem" data-cca2="${country.cca2}"
              tabindex="0" aria-label="${country.name}">

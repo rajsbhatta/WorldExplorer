@@ -5,7 +5,7 @@
    ============================================================ */
 
 import { AppState, navigate, showToast } from './app.js';
-import { flagUrl, fmtNumber, REGIONS }   from './api.js';
+import { flagUrl, fmtNumber, REGIONS, getAllStamps } from './api.js';
 
 /* ── State ───────────────────────────────────────────────────── */
 let _initialised = false;
@@ -212,15 +212,24 @@ function _loadMore() {
 
 /* ── Card HTML ───────────────────────────────────────────────── */
 function _cardHTML(country) {
-  const isHome = AppState.homeCountry?.cca2 === country.cca2;
-  const isFav  = _favourites.has(country.cca2);
-  const pop    = fmtNumber(country.population);
-  const flag   = flagUrl(country, 'w320');
+  const isHome  = AppState.homeCountry?.cca2 === country.cca2;
+  const isFav   = _favourites.has(country.cca2);
+  const stamps  = getAllStamps();
+  const stamp   = stamps[country.cca2];
+  const pop     = fmtNumber(country.population);
+  const flag    = flagUrl(country);
+
+  const stampBadge = stamp === 'visited'
+    ? `<div class="card-stamp-badge visited">✈️ Visited</div>`
+    : stamp === 'wishlist'
+      ? `<div class="card-stamp-badge wishlist">⭐ Wish List</div>`
+      : '';
 
   return `
     <article class="country-card" role="listitem" data-cca2="${country.cca2}"
              tabindex="0" aria-label="${country.name}">
       ${isHome ? '<div class="card-home-badge">🏠 Home</div>' : ''}
+      ${stampBadge}
       <img class="card-flag" src="${flag}" alt="Flag of ${country.name}" loading="lazy"
            width="320" height="180">
       <div class="card-body">
@@ -230,12 +239,9 @@ function _cardHTML(country) {
           <span class="card-pop">👥 ${pop}</span>
           <button class="fav-btn" data-cca2="${country.cca2}"
                   title="${isFav ? 'Remove favourite' : 'Add favourite'}"
-                  aria-label="${isFav ? 'Remove favourite' : 'Add favourite'}"
                   style="background:none;border:none;font-size:14px;cursor:pointer;
                          opacity:${isFav ? '1' : '0.3'};transition:opacity 150ms ease;
-                         padding:2px 4px;">
-            ★
-          </button>
+                         padding:2px 4px;">★</button>
         </div>
       </div>
     </article>`;

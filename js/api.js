@@ -404,3 +404,34 @@ export async function loadWikiSummary(countryName) {
 
   return null;
 }
+
+/* ══════════════════════════════════════════════════════════════
+   PASSPORT STAMPS  (localStorage only — never cleared by cache)
+   Values: 'visited' | 'wishlist' | null
+   ══════════════════════════════════════════════════════════════ */
+const LS_STAMPS = 'worldex:stamps';
+
+function _loadStamps() {
+  try { return JSON.parse(localStorage.getItem(LS_STAMPS) || '{}'); }
+  catch { return {}; }
+}
+
+function _saveStamps(stamps) {
+  localStorage.setItem(LS_STAMPS, JSON.stringify(stamps));
+}
+
+export function getStamp(cca2) {
+  return _loadStamps()[cca2] || null;
+}
+
+export function setStamp(cca2, type) {
+  /* type: 'visited' | 'wishlist' | null (removes stamp) */
+  const stamps = _loadStamps();
+  if (type) stamps[cca2] = type;
+  else delete stamps[cca2];
+  _saveStamps(stamps);
+}
+
+export function getAllStamps() {
+  return _loadStamps();
+}

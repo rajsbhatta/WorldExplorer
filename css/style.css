@@ -760,7 +760,7 @@ h3 { font-size:clamp(1rem,2vw,1.2rem); }
 .card-stamp-badge {
   position:absolute;
   top:var(--sp-2);
-  right:var(--sp-2);
+  left:var(--sp-2);
   font-size:0.58rem;
   font-family:var(--font-display);
   font-weight:700;
@@ -769,6 +769,10 @@ h3 { font-size:clamp(1rem,2vw,1.2rem); }
   border-radius:var(--r-full);
   text-transform:uppercase;
   border:1px solid currentColor;
+  max-width:calc(100% - var(--sp-4));
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
 }
 
 .card-stamp-badge.visited {

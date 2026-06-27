@@ -759,8 +759,8 @@ h3 { font-size:clamp(1rem,2vw,1.2rem); }
 /* ── Stamp badges on country cards ──────────────────────────── */
 .card-stamp-badge {
   position:absolute;
-  bottom:var(--sp-2);
-  left:var(--sp-2);
+  top:var(--sp-2);
+  right:var(--sp-2);
   font-size:0.58rem;
   font-family:var(--font-display);
   font-weight:700;

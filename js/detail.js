@@ -389,12 +389,6 @@ function _downloadPDF(c, wb) {
     </div>
   </div>` : ''}
 
-  ${c.borders.length ? `
-  <div class="section">
-    <div class="section-title">Bordering Countries</div>
-    <div style="font-size:13px;color:#333;">${c.borders.join(' · ')}</div>
-  </div>` : ''}
-
   <div class="footer">
     <span>World Explorer · worldex.app</span>
     <span>Generated ${new Date().toLocaleDateString('en-GB', {day:'numeric',month:'long',year:'numeric'})}</span>

@@ -8,6 +8,7 @@ import { initDetailPage }            from './detail.js';
 import { initComparePage }           from './compare.js';
 import { initGamesPage }             from './games.js';
 import { initSettingsPage, loadPrefs } from './settings.js';
+import { initMePage }                from './me.js';
 
 /* ── State ───────────────────────────────────────────────────── */
 export const AppState = {
@@ -60,7 +61,7 @@ async function registerSW() {
 }
 
 /* ── Router ──────────────────────────────────────────────────── */
-const PAGES = ['home', 'countries', 'compare', 'games', 'settings'];
+const PAGES = ['home', 'countries', 'compare', 'games', 'settings', 'me'];
 
 export function navigate(pageId, params = {}) {
   if (pageId === 'detail') { showDetailView(params.cca2); return; }
@@ -81,6 +82,7 @@ export function navigate(pageId, params = {}) {
   if (pageId === 'compare')   initComparePage();
   if (pageId === 'games')     initGamesPage();
   if (pageId === 'settings')  initSettingsPage();
+  if (pageId === 'me')        initMePage();
 
   window.scrollTo({ top: 0, behavior: 'instant' });
 }

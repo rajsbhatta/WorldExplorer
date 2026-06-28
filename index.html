@@ -95,15 +95,28 @@
         <div><div class="quick-link-label">Compare</div><div class="quick-link-sub">Distance &amp; stats</div></div>
       </button>
       <button class="quick-link-card" onclick="WX.go('games')">
-        <span class="quick-link-icon">🎮</span>
-        <div><div class="quick-link-label">Games</div>
-             <div class="quick-link-sub">Test your knowledge</div></div>
+        <span class="quick-link-icon">🚩</span>
+        <div><div class="quick-link-label">Flag Flash</div><div class="quick-link-sub">Guess the flag</div></div>
       </button>
-      <button class="quick-link-card" onclick="WX.go('settings')">
-        <span class="quick-link-icon">⚙️</span>
-        <div><div class="quick-link-label">Settings</div>
-             <div class="quick-link-sub">Theme, units &amp; more</div></div>
+      <button class="quick-link-card" onclick="WX.go('games')">
+        <span class="quick-link-icon">📏</span>
+        <div><div class="quick-link-label">Distance Duel</div><div class="quick-link-sub">Closer or farther?</div></div>
       </button>
+    </div>
+    <div style="background:var(--bg-surface);border:1px solid var(--border-subtle);
+                border-radius:var(--r-xl);padding:var(--sp-5);margin-top:var(--sp-2);">
+      <div class="t-label mb-3" style="color:var(--text-muted);">About this app</div>
+      <p style="font-size:.85rem;color:var(--text-secondary);line-height:1.7;margin-bottom:var(--sp-3);">
+        World Explorer is a free, offline-capable PWA — political, geographic,
+        demographic and economic data on every country. No ads, no server, zero cost.
+      </p>
+      <div style="display:flex;flex-wrap:wrap;gap:var(--sp-2);">
+        <span class="org-tag">250+ Countries</span>
+        <span class="org-tag">World Bank</span>
+        <span class="org-tag">Wikidata</span>
+        <span class="org-tag">OpenStreetMap</span>
+        <span class="org-tag">Works offline</span>
+      </div>
     </div>
   </main>
 
@@ -121,6 +134,9 @@
 
   <!-- SETTINGS -->
   <main id="page-settings" class="page"></main>
+
+  <!-- ME -->
+  <main id="page-me" class="page"></main>
 
   <!-- Bottom nav -->
   <nav id="bottom-nav">
@@ -161,6 +177,13 @@
         <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
       </svg>
       Settings
+    </button>
+    <button class="nav-item" data-page="me" onclick="WX.go('me')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+        <circle cx="12" cy="7" r="4"/>
+      </svg>
+      Me
     </button>
   </nav>
 

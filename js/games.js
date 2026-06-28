@@ -674,16 +674,32 @@ function _endGame(gameType) {
         <div style="font-size:0.7rem;color:var(--text-muted);margin-top:var(--sp-2);
                     font-family:var(--font-display);font-weight:600;">${pct}% accuracy</div>
       </div>
-
+      
       <div style="display:flex;flex-direction:column;gap:var(--sp-3);max-width:260px;margin:0 auto;">
         <button class="btn btn-primary btn-full" id="play-again-btn">Play Again</button>
-        <button class="btn btn-secondary btn-full" id="back-lobby-btn">← All Games</button>
+        <button class="btn btn-secondary btn-full" id="share-result-btn"
+                style="display:flex;align-items:center;justify-content:center;gap:6px;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+          </svg>
+          Share Result
+        </button>
+        <button class="btn btn-ghost btn-full" id="back-lobby-btn">← All Games</button>
       </div>
     </div>`;
 
   const restarters = { flag:_startFlagGame, capital:_startCapitalGame, mystery:_startMysteryGame, duel:_startDuelGame };
   document.getElementById('play-again-btn')?.addEventListener('click', restarters[gameType]);
   document.getElementById('back-lobby-btn')?.addEventListener('click', _renderLobby);
+  document.getElementById('share-result-btn')?.addEventListener('click', () => {
+    const title  = gameTitles[gameType];
+    const stars  = pct >= 80 ? '⭐⭐⭐' : pct >= 50 ? '⭐⭐' : '⭐';
+    const text   = `${emoji} I scored ${_score}/${max} (${pct}%) in ${title} on World Explorer! ${stars}\n\nThink you can beat me? 🌍`;
+    _shareOrCopy(text);
+  });
 }
 
 /* ── HTML helpers ────────────────────────────────────────────── */
@@ -739,6 +755,18 @@ function _loadScores() {
 
 function _saveScores(s) {
   localStorage.setItem(LS_SCORES, JSON.stringify(s));
+}
+
+function _shareOrCopy(text) {
+  if (navigator.share) {
+    navigator.share({ title: 'World Explorer', text }).catch(() => {});
+  } else {
+    navigator.clipboard.writeText(text).then(() => {
+      showToast('Result copied to clipboard!', 'success');
+    }).catch(() => {
+      showToast('Could not share — try copying manually', 'error');
+    });
+  }
 }
 
 /** Public — called from settings page */

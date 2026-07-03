@@ -79,7 +79,7 @@ function _render(page) {
       `🔍 Mystery Country: ${scores.mystery ?? '—'}/${10*6}`,
       `📏 Distance Duel: ${scores.duel ?? '—'}/10`,
     ].join('\n');
-    const text = `${rank.emoji} I'm a "${rank.title}" on World Explorer!\n\nMy best scores:\n${gameLines}\n\nOverall: ${total} pts (${pct}%) 🌍\n\nCan you beat me?\n🔗worldex.app → https://rajsbhatta.github.io/WorldExplorer/`;
+    const text = `${rank.emoji} I'm a "${rank.title}" on World Explorer!\n\nMy best scores:\n${gameLines}\n\nOverall: ${total} pts (${pct}%) 🌍\n\nCan you beat me?\n🔗https://bit.ly/SBWorldEx`;
     _shareOrCopy(text);
   });
 }
@@ -458,7 +458,7 @@ function _buildShareStory(citizens, home, visited, wishlist, unique, continents)
   lines.push(`🌍 ${unique.length} countr${unique.length === 1 ? 'y' : 'ies'} · ${continents.length} continent${continents.length === 1 ? '' : 's'}`);
   lines.push('');
   lines.push('Explored on World Explorer 🗺️');
-  lines.push('🔗 worldex.app → https://rajsbhatta.github.io/WorldExplorer/');
+  lines.push('🔗 Share your own footprints https://bit.ly/SBWorldEx');
 
   return lines.join('\n');
 }

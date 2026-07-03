@@ -79,7 +79,7 @@ function _render(page) {
       `🔍 Mystery Country: ${scores.mystery ?? '—'}/${10*6}`,
       `📏 Distance Duel: ${scores.duel ?? '—'}/10`,
     ].join('\n');
-    const text = `${rank.emoji} I'm a "${rank.title}" on World Explorer!\n\nMy best scores:\n${gameLines}\n\nOverall: ${total} pts (${pct}%) 🌍\n\nThink you can beat me?\n🔗 https://rajsbhatta.github.io/WorldExplorer/`;
+    const text = `${rank.emoji} I'm a "${rank.title}" on World Explorer!\n\nMy best scores:\n${gameLines}\n\nOverall: ${total} pts (${pct}%) 🌍\n\nCan you beat me?\n🔗worldex.app → https://rajsbhatta.github.io/WorldExplorer/`;
     _shareOrCopy(text);
   });
 }

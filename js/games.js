@@ -697,7 +697,7 @@ function _endGame(gameType) {
   document.getElementById('share-result-btn')?.addEventListener('click', () => {
     const title  = gameTitles[gameType];
     const stars  = pct >= 80 ? '⭐⭐⭐' : pct >= 50 ? '⭐⭐' : '⭐';
-    const text   = `${emoji} I scored ${_score}/${max} (${pct}%) in ${title} on World Explorer! ${stars}\n\nThink you can beat me? 🌍`;
+    const text   = `${emoji} I scored ${_score}/${max} (${pct}%) in ${title} on World Explorer! ${stars}\n\nThink you can beat me? 🌍 https://bit.ly/SBWorldEx`;
     _shareOrCopy(text);
   });
 }

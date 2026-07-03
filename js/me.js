@@ -199,9 +199,6 @@ function _quickFactsSection(visited, wishlist) {
     if (c.languages.length > 3)
       facts.push({ flag: flagUrl(c), text: `<strong>${c.name}</strong> recognises <strong>${c.languages.length}</strong> official languages — a true melting pot of culture.` });
 
-    if (c.timezones.length > 5)
-      facts.push({ flag: flagUrl(c), text: `<strong>${c.name}</strong> spans <strong>${c.timezones.length}</strong> time zones — breakfast in the east while it's still last night in the west!` });
-
     if (c.continents?.length > 1)
       facts.push({ flag: flagUrl(c), text: `<strong>${c.name}</strong> spans <strong>${c.continents.length}</strong> continents — a truly transcontinental nation!` });
 

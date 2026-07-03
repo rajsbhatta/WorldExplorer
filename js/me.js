@@ -1,6 +1,7 @@
 /* ============================================================
    World Explorer — Me Page  (js/me.js)
    Personal travel passport & stats
+   Includes: share story, share rank, share footprint
    ============================================================ */
 
 import { AppState }                    from './app.js';
@@ -35,6 +36,11 @@ function _render(page) {
   const favs     = _getFavourites();
   const scores   = _getScores();
 
+  /* Pre-compute footprint values needed for sharing */
+  const allVisitedFlat = [...visited.map(v => v.country), ...(home ? [home] : [])];
+  const unique         = [...new Map(allVisitedFlat.map(c => [c.cca2, c])).values()];
+  const continentsArr  = [...new Set(unique.flatMap(c => c.continents || [c.region]))];
+
   page.innerHTML = `
     <h2 class="t-heading mb-5" style="font-size:1.25rem;">My Travel Passport</h2>
 
@@ -47,23 +53,49 @@ function _render(page) {
 
     <div style="height:var(--sp-8);"></div>
   `;
+
+  /* ── Share: My Story + Footprint ── */
+  document.getElementById('share-story-btn')?.addEventListener('click', () => {
+    _shareOrCopy(_buildShareStory(citizens, home, visited, wishlist, unique, continentsArr));
+  });
+
+  /* ── Share: Geography Rank ── */
+  document.getElementById('share-rank-btn')?.addEventListener('click', () => {
+    const gameKeys = ['flag','capital','mystery','duel'];
+    const maxTotal = 10*10 + 10*12 + 10*6 + 10;
+    const total    = gameKeys.reduce((s, k) => s + (scores[k] || 0), 0);
+    const pct      = maxTotal ? Math.round((total / maxTotal) * 100) : 0;
+    const ranks    = [
+      { min:80, title:'Geography Master',  emoji:'🏆' },
+      { min:60, title:'Seasoned Explorer', emoji:'🌍' },
+      { min:40, title:'Keen Traveller',    emoji:'🧭' },
+      { min:20, title:'Curious Wanderer',  emoji:'🗺️' },
+      { min:0,  title:'Globe Rookie',      emoji:'🌱' },
+    ];
+    const rank = ranks.find(r => pct >= r.min) || ranks[ranks.length - 1];
+    const gameLines = [
+      `🚩 Flag Flash: ${scores.flag ?? '—'}/${10*10}`,
+      `🏙️ Capital Quiz: ${scores.capital ?? '—'}/${10*12}`,
+      `🔍 Mystery Country: ${scores.mystery ?? '—'}/${10*6}`,
+      `📏 Distance Duel: ${scores.duel ?? '—'}/10`,
+    ].join('\n');
+    const text = `${rank.emoji} I'm a "${rank.title}" on World Explorer!\n\nMy best scores:\n${gameLines}\n\nOverall: ${total} pts (${pct}%) 🌍\n\nThink you can beat me?`;
+    _shareOrCopy(text);
+  });
 }
 
 /* ══════════════════════════════════════════════════════════════
    SECTION 1 — Personal story
    ══════════════════════════════════════════════════════════════ */
 function _storySection(citizens, home, visited, wishlist) {
-  /* Build the narrative sentence */
   let story = '';
 
-  /* Citizenship */
   if (citizens.length === 1) {
     story += `I hold a passport of <strong>${citizens[0].name}</strong> 🛂`;
   } else if (citizens.length === 2) {
     story += `I hold the proud dual citizenship of <strong>${citizens[0].name}</strong> and <strong>${citizens[1].name}</strong> 🛂🛂`;
   }
 
-  /* Home */
   if (home) {
     const comma = story ? ', and I currently call ' : 'I currently call ';
     story += `${comma}<strong>${home.name}</strong> my home 🏠`;
@@ -71,7 +103,6 @@ function _storySection(citizens, home, visited, wishlist) {
 
   story += story ? '. ' : '';
 
-  /* Visited */
   if (visited.length > 0) {
     const visitedParts = visited.map(v =>
       `<strong>${v.country.name}</strong>${v.stamp.year ? ' in ' + v.stamp.year : ''}`
@@ -84,7 +115,6 @@ function _storySection(citizens, home, visited, wishlist) {
     }
   }
 
-  /* Wishlist */
   if (wishlist.length > 0) {
     const wishParts = wishlist.map(w => `<strong>${w.country.name}</strong>`);
     if (wishlist.length === 1) {
@@ -99,7 +129,6 @@ function _storySection(citizens, home, visited, wishlist) {
     story = `Your travel story is waiting to be written! Start by setting your home country and stamping the places you've visited 🌍✨`;
   }
 
-  /* Flag strip */
   const allCountries = [
     ...citizens,
     ...(home ? [home] : []),
@@ -111,7 +140,7 @@ function _storySection(citizens, home, visited, wishlist) {
   const flagStrip = unique.length
     ? `<div style="display:flex;flex-wrap:wrap;gap:var(--sp-2);margin-top:var(--sp-4);">
         ${unique.map(c => `
-          <div title="${c.name}" style="position:relative;cursor:default;">
+          <div title="${c.name}">
             <img src="${flagUrl(c)}" alt="${c.name}"
                  style="width:44px;height:30px;object-fit:cover;border-radius:4px;
                         box-shadow:var(--shadow-sm);border:1px solid var(--border-subtle);">
@@ -126,12 +155,23 @@ function _storySection(citizens, home, visited, wishlist) {
           ${story}
         </p>
         ${flagStrip}
+        <button id="share-story-btn"
+                style="margin-top:var(--sp-4);display:inline-flex;align-items:center;gap:6px;
+                       background:none;border:1px solid var(--border-mid);border-radius:var(--r-full);
+                       padding:6px 16px;font-family:var(--font-display);font-weight:600;
+                       font-size:0.75rem;color:var(--text-secondary);cursor:pointer;
+                       transition:all var(--tx-fast);"
+                onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'"
+                onmouseout="this.style.borderColor='var(--border-mid)';this.style.color='var(--text-secondary)'">
+          ${_shareIcon()}
+          Share My Story &amp; Footprint
+        </button>
       </div>
     </div>`;
 }
 
 /* ══════════════════════════════════════════════════════════════
-   SECTION 2 — Quick facts about visited / wishlist countries
+   SECTION 2 — Quick facts
    ══════════════════════════════════════════════════════════════ */
 function _quickFactsSection(visited, wishlist) {
   const pool = [...visited.map(v => v.country), ...wishlist.map(w => w.country)];
@@ -170,13 +210,11 @@ function _quickFactsSection(visited, wishlist) {
   });
 
   if (!facts.length) {
-    /* Generic fallback facts */
     pool.slice(0, 3).forEach(c => {
       facts.push({ flag: flagUrl(c), text: `<strong>${c.name}</strong> is located in <strong>${c.subregion || c.region}</strong> with a capital at <strong>${c.capital}</strong>.` });
     });
   }
 
-  /* Shuffle and pick up to 5 */
   const picked = _shuffle(facts).slice(0, 5);
 
   return `
@@ -198,32 +236,30 @@ function _quickFactsSection(visited, wishlist) {
 }
 
 /* ══════════════════════════════════════════════════════════════
-   SECTION 3 — World stats
+   SECTION 3 — World footprint
    ══════════════════════════════════════════════════════════════ */
 function _worldStatsSection(visited, home) {
-  const allCountries  = AppState.countries;
-  const worldPop      = allCountries.reduce((s, c) => s + (c.population || 0), 0);
-  const worldArea     = allCountries.reduce((s, c) => s + (c.area || 0), 0);
+  const allCountries = AppState.countries;
+  const worldPop     = allCountries.reduce((s, c) => s + (c.population || 0), 0);
+  const worldArea    = allCountries.reduce((s, c) => s + (c.area || 0), 0);
 
-  const visitedCountries = visited.map(v => v.country);
-  if (home) visitedCountries.push(home);
-  const unique = [...new Map(visitedCountries.map(c => [c.cca2, c])).values()];
+  const visitedFlat  = [...visited.map(v => v.country), ...(home ? [home] : [])];
+  const unique       = [...new Map(visitedFlat.map(c => [c.cca2, c])).values()];
 
-  const visitedPop  = unique.reduce((s, c) => s + (c.population || 0), 0);
-  const visitedArea = unique.reduce((s, c) => s + (c.area || 0), 0);
-  const popPct      = worldPop  ? ((visitedPop  / worldPop)  * 100).toFixed(1) : 0;
-  const areaPct     = worldArea ? ((visitedArea / worldArea) * 100).toFixed(1) : 0;
+  const visitedPop   = unique.reduce((s, c) => s + (c.population || 0), 0);
+  const visitedArea  = unique.reduce((s, c) => s + (c.area || 0), 0);
+  const popPct       = worldPop  ? ((visitedPop  / worldPop)  * 100).toFixed(1) : 0;
+  const areaPct      = worldArea ? ((visitedArea / worldArea) * 100).toFixed(1) : 0;
 
-  const continents = [...new Set(unique.flatMap(c => c.continents || [c.region]))];
-  const totalCount = unique.length;
+  const continents   = [...new Set(unique.flatMap(c => c.continents || [c.region]))];
 
   return `
     <div class="settings-section" style="margin-bottom:var(--sp-5);">
       <div class="settings-section-title">My World Footprint</div>
-      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:var(--sp-3);padding:var(--sp-4) var(--sp-5);">
-
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:var(--sp-3);
+                  padding:var(--sp-4) var(--sp-5);">
         <div class="stat-tile">
-          <div class="stat-tile-num">${totalCount}</div>
+          <div class="stat-tile-num">${unique.length}</div>
           <div class="stat-tile-label">Countries Visited</div>
         </div>
         <div class="stat-tile">
@@ -340,17 +376,17 @@ function _favouritesSection(favs) {
    SECTION 6 — Geography rank
    ══════════════════════════════════════════════════════════════ */
 function _rankSection(scores) {
-  const games    = ['flag','capital','mystery','duel'];
+  const gameKeys = ['flag','capital','mystery','duel'];
   const maxTotal = 10*10 + 10*12 + 10*6 + 10;
-  const total    = games.reduce((s, k) => s + (scores[k] || 0), 0);
+  const total    = gameKeys.reduce((s, k) => s + (scores[k] || 0), 0);
   const pct      = maxTotal ? (total / maxTotal) * 100 : 0;
 
   const ranks = [
-    { min:80, title:'Geography Master',    emoji:'🏆', desc:'You know this planet like the back of your hand. Absolutely elite.' },
-    { min:60, title:'Seasoned Explorer',   emoji:'🌍', desc:'You\'ve got serious world knowledge and an adventurous spirit.' },
-    { min:40, title:'Keen Traveller',      emoji:'🧭', desc:'You\'re curious, growing, and ready for more adventures.' },
-    { min:20, title:'Curious Wanderer',    emoji:'🗺️', desc:'The world is calling and you\'re just getting started!' },
-    { min:0,  title:'Globe Rookie',        emoji:'🌱', desc:'Every great explorer starts somewhere. Your journey begins now!' },
+    { min:80, title:'Geography Master',  emoji:'🏆', desc:'You know this planet like the back of your hand. Absolutely elite.' },
+    { min:60, title:'Seasoned Explorer', emoji:'🌍', desc:'You\'ve got serious world knowledge and an adventurous spirit.' },
+    { min:40, title:'Keen Traveller',    emoji:'🧭', desc:'You\'re curious, growing, and ready for more adventures.' },
+    { min:20, title:'Curious Wanderer',  emoji:'🗺️', desc:'The world is calling and you\'re just getting started!' },
+    { min:0,  title:'Globe Rookie',      emoji:'🌱', desc:'Every great explorer starts somewhere. Your journey begins now!' },
   ];
 
   const rank = ranks.find(r => pct >= r.min) || ranks[ranks.length - 1];
@@ -366,8 +402,10 @@ function _rankSection(scores) {
         </div>
         <p style="font-size:0.86rem;color:var(--text-secondary);line-height:1.6;
                   max-width:280px;margin:0 auto var(--sp-5);">${rank.desc}</p>
+
         <div style="background:var(--bg-raised);border-radius:var(--r-lg);
-                    padding:var(--sp-4);display:inline-block;min-width:200px;">
+                    padding:var(--sp-4);display:inline-block;min-width:200px;
+                    margin-bottom:var(--sp-4);">
           <div style="height:6px;background:var(--bg-overlay);border-radius:var(--r-full);
                       overflow:hidden;margin-bottom:var(--sp-2);">
             <div style="width:${Math.min(pct,100).toFixed(1)}%;height:100%;
@@ -377,11 +415,81 @@ function _rankSection(scores) {
           <div style="font-size:0.72rem;color:var(--text-muted);font-family:var(--font-display);
                       font-weight:600;">Overall score: ${total} / ${maxTotal}</div>
         </div>
+
+        <div>
+          <button id="share-rank-btn"
+                  style="display:inline-flex;align-items:center;gap:6px;
+                         background:none;border:1px solid var(--border-mid);
+                         border-radius:var(--r-full);padding:8px 20px;
+                         font-family:var(--font-display);font-weight:600;
+                         font-size:0.78rem;color:var(--text-secondary);cursor:pointer;
+                         transition:all var(--tx-fast);"
+                  onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'"
+                  onmouseout="this.style.borderColor='var(--border-mid)';this.style.color='var(--text-secondary)'">
+            ${_shareIcon()}
+            Share My Rank
+          </button>
+        </div>
       </div>
     </div>`;
 }
 
-/* ── Helpers ─────────────────────────────────────────────────── */
+/* ── Share helpers ───────────────────────────────────────────── */
+function _buildShareStory(citizens, home, visited, wishlist, unique, continents) {
+  const lines = [];
+
+  if (citizens.length === 1)
+    lines.push(`🛂 Citizen of ${citizens[0].name}`);
+  else if (citizens.length === 2)
+    lines.push(`🛂 Dual citizen of ${citizens[0].name} & ${citizens[1].name}`);
+
+  if (home)
+    lines.push(`🏠 Currently living in ${home.name}`);
+
+  if (visited.length)
+    lines.push(`✈️ Visited: ${visited.map(v =>
+      v.country.name + (v.stamp.year ? ' (' + v.stamp.year + ')' : '')
+    ).join(', ')}`);
+
+  if (wishlist.length)
+    lines.push(`⭐ Wish list: ${wishlist.map(w => w.country.name).join(', ')}`);
+
+  lines.push('');
+  lines.push(`🌍 ${unique.length} countr${unique.length === 1 ? 'y' : 'ies'} · ${continents.length} continent${continents.length === 1 ? '' : 's'}`);
+  lines.push('');
+  lines.push('Explored on World Explorer 🗺️');
+
+  return lines.join('\n');
+}
+
+function _shareOrCopy(text) {
+  if (navigator.share) {
+    navigator.share({ title: 'World Explorer', text }).catch(() => {});
+  } else {
+    navigator.clipboard.writeText(text)
+      .then(() => {
+        import('./app.js').then(({ showToast }) =>
+          showToast('Copied to clipboard! 📋', 'success')
+        );
+      })
+      .catch(() => {
+        import('./app.js').then(({ showToast }) =>
+          showToast('Could not share — try copying manually', 'error')
+        );
+      });
+  }
+}
+
+function _shareIcon() {
+  return `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+    <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+  </svg>`;
+}
+
+/* ── Data helpers ────────────────────────────────────────────── */
 function _getTagged(stamps, type) {
   return Object.entries(stamps)
     .filter(([, v]) => {
